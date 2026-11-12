@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.3.0
+
+- Online updates: the app checks this project's GitHub releases at start and shows what is new.
+- One-click install: the setup is downloaded, checked against its SHA-256 fingerprint and started for you.
+- "What is new" link to the release page, and a switch in About to turn the automatic check off.
+- The folder-based update check stays available for offline use.
+
 ## 2.2.0
 
 - Session restore: the tabs you had open come back at the next start.

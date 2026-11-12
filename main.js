@@ -153,7 +153,7 @@ function officeArgs(argv) {
 let settings = {};
 const THEMES = ['system', 'light', 'dark'];
 const settingsView = () => ({ theme: THEMES.includes(settings.theme) ? settings.theme : 'system', restore: settings.restore !== false,
-  pins: Array.isArray(settings.pins) ? settings.pins : [], updateDir: settings.updateDir || '' });
+  pins: Array.isArray(settings.pins) ? settings.pins : [], updateDir: settings.updateDir || '', autoUpdate: settings.autoUpdate !== false });
 function applyTheme() { nativeTheme.themeSource = settingsView().theme; }
 
 async function searchFiles(query) {
@@ -185,14 +185,86 @@ async function searchFiles(query) {
 const SETUP_RE = /^YourOfficeSuite-Setup-(\d+)\.(\d+)\.(\d+)\.exe$/i;
 const verOf = (name) => { const m = SETUP_RE.exec(name); return m ? m.slice(1).map(Number) : null; };
 const newer = (a, b) => { for (let i = 0; i < 3; i++) { if (a[i] !== b[i]) return a[i] > b[i]; } return false; };
-async function checkUpdate() {
+async function checkFolder() {
   const dir = settings.updateDir;
   if (!dir) return { configured: false, available: false };
   const cur = app.getVersion().split('.').map(Number); let best = null;
   try {
     for (const name of await fsp.readdir(dir)) { const v = verOf(name); if (v && newer(v, cur) && (!best || newer(v, best.v))) best = { v, name }; }
   } catch (_) { return { configured: true, dir, available: false, error: 'The updates folder could not be read.' }; }
-  return best ? { configured: true, dir, available: true, version: best.v.join('.'), file: path.join(dir, best.name) } : { configured: true, dir, available: false };
+  return best ? { configured: true, dir, available: true, source: 'folder', version: best.v.join('.'), file: path.join(dir, best.name) } : { configured: true, dir, available: false };
+}
+
+// Online updates come from this project's GitHub releases. This is the only place the app goes online,
+// through its own session that can reach GitHub and nothing else.
+const UPDATE_REPO = 'aglr-afk/YourOfficeSuite';
+const UPDATE_HOSTS = /^(github\.com|api\.github\.com|[a-z0-9-]+\.githubusercontent\.com)$/i;
+let updateSes = null; let checkedOnlineAt = null; let lastOffer = null;
+function updateSession() {
+  if (!updateSes) {
+    updateSes = session.fromPartition('yos-update', { cache: false });
+    updateSes.webRequest.onBeforeRequest((d, cb) => {
+      let ok = false; try { const u = new URL(d.url); ok = u.protocol === 'https:' && UPDATE_HOSTS.test(u.hostname); } catch (_) { ok = false; }
+      cb({ cancel: !ok });
+    });
+  }
+  return updateSes;
+}
+async function fetchOnline(url, ms) {
+  const ctl = new AbortController(); const timer = setTimeout(() => ctl.abort(), ms || 15000);
+  try { return await updateSession().fetch(url, { signal: ctl.signal, redirect: 'follow', headers: { 'User-Agent': `YourOfficeSuite/${app.getVersion()}`, Accept: 'application/json, application/octet-stream' } }); }
+  finally { clearTimeout(timer); }
+}
+async function checkOnline() {
+  checkedOnlineAt = Date.now(); let info = null;
+  try {
+    // Each release carries a small latest.json; the GitHub API is the fallback for releases without one.
+    let r = await fetchOnline(`https://github.com/${UPDATE_REPO}/releases/latest/download/latest.json`);
+    if (r.ok) { const m = await r.json(); info = { version: String(m.version || ''), file: String(m.file || ''), sha256: m.sha256, size: m.size, notes: m.notes }; }
+    else {
+      r = await fetchOnline(`https://api.github.com/repos/${UPDATE_REPO}/releases/latest`);
+      if (r.ok) {
+        const j = await r.json(); const asset = (j.assets || []).find((x) => SETUP_RE.test(x.name));
+        if (asset) info = { version: verOf(asset.name).join('.'), file: asset.name, size: asset.size, notes: j.body || '', sha256: (/sha-?256[:\s`*]+([a-f0-9]{64})/i.exec(j.body || '') || [])[1] };
+      }
+    }
+  } catch (_) { return { available: false, error: 'Could not reach GitHub to check for updates.' }; }
+  if (!info) return { available: false };
+  const v = verOf(info.file); const cur = app.getVersion().split('.').map(Number);
+  if (!v || v.join('.') !== info.version) return { available: false };
+  if (!newer(v, cur)) return { available: false, latest: info.version };
+  return { available: true, source: 'online', version: info.version, file: info.file, size: Number(info.size) > 0 ? Number(info.size) : null,
+    sha256: /^[a-f0-9]{64}$/i.test(String(info.sha256 || '')) ? String(info.sha256).toLowerCase() : null, notes: String(info.notes || '').slice(0, 4000),
+    url: `https://github.com/${UPDATE_REPO}/releases/download/v${info.version}/${info.file}`, page: `https://github.com/${UPDATE_REPO}/releases/tag/v${info.version}` };
+}
+// The newest offer from the updates folder and, when asked, from GitHub.
+async function checkUpdate(opts) {
+  const folder = await checkFolder(); const online = opts && opts.online ? await checkOnline() : null;
+  let pick = folder;
+  if (online && online.available && (!folder.available || newer(online.version.split('.').map(Number), folder.version.split('.').map(Number)))) pick = online;
+  lastOffer = pick.available ? pick : null;
+  return { ...pick, configured: folder.configured, dir: folder.dir, checkedOnlineAt, onlineError: online && online.error ? online.error : null, folderError: folder.error || null, latest: online ? online.latest || null : null };
+}
+async function downloadUpdate(offer) {
+  const crypto = require('crypto'); const target = path.join(app.getPath('temp'), offer.file);
+  const res = await fetchOnline(offer.url, 30 * 60 * 1000);
+  if (!res.ok || !res.body) throw new Error('The update could not be downloaded.');
+  const total = offer.size || Number(res.headers.get('content-length')) || 0; const hash = crypto.createHash('sha256'); const out = fs.createWriteStream(target);
+  let received = 0; let first = null; let lastSent = 0; const reader = res.body.getReader();
+  try {
+    for (;;) {
+      const { done, value } = await reader.read(); if (done) break;
+      const chunk = Buffer.from(value); if (!first) first = chunk; hash.update(chunk); received += chunk.length;
+      if (!out.write(chunk)) await new Promise((r) => out.once('drain', r));
+      if (win && Date.now() - lastSent > 200) { lastSent = Date.now(); win.webContents.send('update-progress', { received, total }); }
+    }
+  } finally { await new Promise((r) => out.end(r)); }
+  const bad = async (why) => { await fsp.unlink(target).catch(() => {}); throw new Error(why); };
+  if (!first || first.length < 2 || first[0] !== 0x4d || first[1] !== 0x5a) await bad('The downloaded update is not a setup file.');
+  if (offer.size && received !== offer.size) await bad('The update download was incomplete. Please try again.');
+  if (offer.sha256 && hash.digest('hex') !== offer.sha256) await bad('The downloaded update did not pass its safety check, so it was not started.');
+  if (win) win.webContents.send('update-progress', { received, total: received });
+  return target;
 }
 
 // ---------- file validation ----------
@@ -257,6 +329,7 @@ function registerIpc() {
     if (typeof p.restore === 'boolean') settings.restore = p.restore;
     if (Array.isArray(p.pins)) settings.pins = p.pins.filter((x) => x && typeof x.path === 'string').slice(0, 60).map((x) => ({ path: x.path, isDir: !!x.isDir }));
     if (p.updateDir === '') settings.updateDir = '';
+    if (typeof p.autoUpdate === 'boolean') settings.autoUpdate = p.autoUpdate;
     await writeJson('settings.json', settings); applyTheme();
     return settingsView();
   });
@@ -292,15 +365,19 @@ function registerIpc() {
     }
     throw new Error('Could not find a free file name');
   });
-  handle('update:check', async () => checkUpdate());
-  handle('update:install', async (file) => {
-    const info = await checkUpdate();
-    if (!info.available || info.file !== file || !fs.existsSync(file)) throw new Error('That update is no longer available.');
+  handle('update:check', async (opts) => checkUpdate({ online: !!(opts && opts.online) }));
+  handle('update:install', async (version) => {
+    const offer = lastOffer;
+    if (!offer || !offer.available || offer.version !== version) throw new Error('That update is no longer available.');
     if (process.platform !== 'win32') throw new Error('Updates can only be installed on Windows.');
+    let file = offer.file;
+    if (offer.source === 'online') file = await downloadUpdate(offer);
+    else if (!fs.existsSync(file)) throw new Error('That update is no longer available.');
     const child = childProcess.spawn(file, [], { detached: true, stdio: 'ignore' }); child.unref();
     forceClose = true; setTimeout(() => app.quit(), 400);
     return { started: true };
   });
+  handle('update:openPage', async () => { if (lastOffer && lastOffer.page && lastOffer.page.startsWith(`https://github.com/${UPDATE_REPO}/`)) shell.openExternal(lastOffer.page); });
 
   handle('fs:list', async (dir) => {
     const out = [];

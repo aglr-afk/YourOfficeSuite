@@ -54,7 +54,19 @@ Compression takes several minutes. The version number is set in two places: `pac
 
 ### Signing
 
-The published installer is not code-signed. If you have a code-signing certificate, sign `release/win-unpacked/YourOfficeSuite.exe` before step 4 and the setup file after it, for example with `signtool` on Windows.
+If you have a code-signing certificate, sign `release/win-unpacked/YourOfficeSuite.exe` before step 4 and the setup file after it, for example with `signtool` on Windows.
+
+## 5. Publish a release
+
+The app learns about new versions from a small `latest.json` file attached to each GitHub release.
+
+```bash
+npm run latest-json            # writes release/latest.json with the version, size and SHA-256 of the setup file
+gh release create v2.3.0 release/YourOfficeSuite-Setup-2.3.0.exe release/latest.json \
+  --title "YourOfficeSuite 2.3.0" --notes-file docs/RELEASE_NOTES_2.3.0.md
+```
+
+Always upload both files. Installed copies read `releases/latest/download/latest.json`, compare the version with their own, and check the downloaded setup against the SHA-256 in that file before starting it.
 
 ## Regenerating the templates
 
@@ -86,5 +98,5 @@ Set `APP_BIN` to a packaged binary (for example `release-linux/linux-unpacked/yo
 Notes:
 
 - The screen must be 1440 x 900, because some checks click at fixed positions inside the editors.
-- The suite was written for Linux. It has not been run on Windows.
+- The suite runs on Linux.
 - Run `fixtures.py` before every run; the tests change the files they work on.

@@ -11,7 +11,7 @@
   const AUTOSAVE_MS = 5000;
   const SVG = 'http://www.w3.org/2000/svg';
 
-  const state = { tabs: [], workers: [], active: 'home', page: 'start', roots: [], recent: [], loc: { type: 'recent' }, entries: [], sep: '\\', newCount: {}, seq: 0, version: '', settings: { theme: 'system', restore: true, pins: [], updateDir: '' }, update: { available: false }, restoring: false, lastSession: '' };
+  const state = { tabs: [], workers: [], active: 'home', page: 'start', roots: [], recent: [], loc: { type: 'recent' }, entries: [], sep: '\\', newCount: {}, seq: 0, version: '', settings: { theme: 'system', restore: true, pins: [], updateDir: '', autoUpdate: true }, update: { available: false }, restoring: false, lastSession: '' };
 
   // ---------- helpers ----------
   const extOf = (name) => (name.includes('.') ? name.split('.').pop().toLowerCase() : '');
@@ -57,8 +57,11 @@
       const b2 = el('div'); b2.style.display = 'flex'; b2.style.gap = '6px'; b2.style.flex = 'none';
       const pick = el('button', 'btn', state.settings.updateDir ? 'Change folder' : 'Choose folder'); pick.id = 'setUpdateDir'; const chk = el('button', 'btn', 'Check now'); chk.id = 'setUpdateCheck';
       pick.addEventListener('click', async () => { const r = await api.invoke('settings:pickUpdateDir'); if (r) { state.settings = r.settings; state.update = r.update; pick.textContent = 'Change folder'; upText.textContent = updateText(); renderUpdate(); } });
-      chk.addEventListener('click', async () => { state.update = await api.invoke('update:check'); upText.textContent = updateText(); renderUpdate(); });
-      b2.append(pick, chk); l2.append(d2, b2); set.append(l1, l2);
+      chk.addEventListener('click', async () => { chk.disabled = true; upText.textContent = 'Checking…'; try { state.update = await api.invoke('update:check', { online: true }); } catch (_) { /* shown as no update */ } chk.disabled = false; upText.textContent = updateText(true); renderUpdate(); });
+      b2.append(pick, chk); l2.append(d2, b2);
+      const l3 = el('label', 'line'); const d3 = el('div'); d3.append(el('b', '', 'Check for updates when the app starts'), el('span', '', 'Looks at this project\'s page on GitHub for a newer version. Nothing about you or your files is sent.'));
+      const c3 = el('input'); c3.type = 'checkbox'; c3.id = 'setAutoUpdate'; c3.checked = state.settings.autoUpdate; c3.addEventListener('change', async () => { state.settings = await api.invoke('settings:set', { autoUpdate: c3.checked }); }); l3.append(d3, c3);
+      set.append(l1, l3, l2);
       const keys = el('button', 'link', 'Keyboard shortcuts'); keys.id = 'btnKeys'; keys.prepend(icon('i-keyboard')); keys.addEventListener('click', showShortcuts);
       const left = el('div'); left.style.display = 'flex'; left.style.gap = '4px'; left.append(lic, keys); foot.textContent = ''; foot.append(left, ok);
       s.append(top,
@@ -67,23 +70,33 @@
         pills, set, foot);
     });
   }
-  function updateText() {
+  function updateText(manual) {
     const u = state.update || {};
-    if (!state.settings.updateDir) return 'Choose the folder where you keep new setup files, and the app will tell you when a newer one is there.';
-    if (u.error) return u.error;
-    return u.available ? `Version ${u.version} is ready to install. Folder: ${state.settings.updateDir}` : `You have the latest version in this folder: ${state.settings.updateDir}`;
+    if (u.available) return `Version ${u.version} is ready to install${u.source === 'online' ? ' from GitHub.' : `. Folder: ${state.settings.updateDir}`}`;
+    if (manual && u.onlineError) return u.onlineError;
+    if (u.folderError) return u.folderError;
+    const when = u.checkedOnlineAt ? ` Last checked ${fmtTime(u.checkedOnlineAt)}.` : '';
+    return `You have the latest version.${when}${state.settings.updateDir ? ` Updates folder: ${state.settings.updateDir}` : ' You can also choose a folder to pick up setup files from.'}`;
   }
+  let updating = false;
   function renderUpdate() {
     const bar = $('updateBar'); const u = state.update || {}; bar.hidden = !u.available;
-    if (u.available) bar.querySelector('span').textContent = `Version ${u.version} of YourOfficeSuite is ready to install.`;
+    if (!u.available || updating) return;
+    bar.querySelector('span').textContent = `Version ${u.version} of YourOfficeSuite is ready to install.`;
+    $('btnUpdateNotes').hidden = !u.page; $('btnUpdate').disabled = false; $('btnUpdate').textContent = 'Install';
   }
   async function installUpdate() {
-    const u = state.update || {}; if (!u.available) return;
+    const u = state.update || {}; if (!u.available || updating) return;
     if (state.tabs.some((t) => t.dirty)) { toast('Save your open files first, then install the update.', true); return; }
+    const notes = u.notes ? `\n\nWhat is new:\n${u.notes.split('\n').filter((l) => l.trim()).slice(0, 12).join('\n')}` : '';
     const r = await api.invoke('dlg:message', { type: 'question', buttons: ['Install now', 'Later'], defaultId: 0, cancelId: 1, title: 'Install update',
-      message: `Install YourOfficeSuite ${u.version}?`, detail: `The app will close and the setup will start.\n${u.file}` });
+      message: `Install YourOfficeSuite ${u.version}?`, detail: `${u.source === 'online' ? 'The update will be downloaded from GitHub, then the app will close and the setup will start.' : `The app will close and the setup will start.\n${u.file}`}${notes}` });
     if (r !== 0) return;
-    try { await api.invoke('update:install', u.file); } catch (e) { toast(errText(e), true); }
+    updating = true; $('btnUpdate').disabled = true;
+    if (u.source === 'online') $('updateBar').querySelector('span').textContent = `Downloading version ${u.version}…`;
+    try { await api.invoke('update:install', u.version); }
+    catch (e) { toast(errText(e), true); }
+    updating = false; renderUpdate();
   }
   const SHORTCUTS = [['Ctrl + N', 'New document'], ['Ctrl + O', 'Open a file'], ['Ctrl + S', 'Save'], ['Ctrl + Shift + S', 'Save as'], ['Ctrl + W', 'Close the current tab'],
     ['Ctrl + Tab', 'Next tab'], ['Ctrl + Shift + Tab', 'Previous tab'], ['Ctrl + 1', 'Go to Home'], ['Ctrl + 2 to 9', 'Go to that tab'], ['F1', 'Show this list'], ['Esc', 'Close a menu or window']];
@@ -626,6 +639,11 @@
     $('btnAbout').addEventListener('click', showAbout);
     $('btnTheme').addEventListener('click', cycleTheme);
     $('btnUpdate').addEventListener('click', installUpdate);
+    $('btnUpdateNotes').addEventListener('click', () => api.invoke('update:openPage'));
+    api.onUpdateProgress((p) => { if (!updating) return; const u = state.update || {}; const pct = p.total ? Math.min(100, Math.round(p.received / p.total * 100)) : null;
+      $('updateBar').querySelector('span').textContent = `Downloading version ${u.version}… ${pct == null ? fmtSize(p.received) : pct + '%'}`; });
+    // Quiet check against the project's GitHub releases; any failure simply means no update is shown.
+    if (state.settings.autoUpdate) api.invoke('update:check', { online: true }).then((u) => { state.update = u; renderUpdate(); }).catch(() => {});
     $('search').addEventListener('input', () => { clearTimeout(searchTimer); searchTimer = setTimeout(runSearch, 280); });
     $('searchClear').addEventListener('click', () => { $('search').value = ''; runSearch(); });
     document.addEventListener('mousedown', (e) => { if (!$('ctx').hidden && !$('ctx').contains(e.target)) closeMenu(); });

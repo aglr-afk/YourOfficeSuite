@@ -3,7 +3,7 @@ Unicode true
 !include "FileFunc.nsh"
 !define APP "YourOfficeSuite"
 !define EXE "YourOfficeSuite.exe"
-!define VER "2.2.0"
+!define VER "2.3.0"
 !define UNKEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\YourOfficeSuite"
 Name "${APP}"
 OutFile "../release/YourOfficeSuite-Setup-${VER}.exe"

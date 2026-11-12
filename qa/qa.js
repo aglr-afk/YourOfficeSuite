@@ -44,7 +44,17 @@ async function browse(...parts) {
   await page('files'); await win.click('#roots .root:has-text("od")'); await win.waitForSelector('.row:has-text("Budget.xlsx")');
   for (const p of parts) { await win.click(`.row:has-text("${p}")`); await sleep(500); }
 }
-async function waitOpened(timeout = 120000) { await win.waitForFunction(() => !document.getElementById('btnSave').disabled, null, { timeout }); await sleep(3000); }
+// "Opened" arrives before the editor has drawn the page. Wait until its status bar shows the page or slide count.
+async function editorReady() {
+  for (let i = 0; i < 40; i++) {
+    try {
+      const outer = await (await win.$('#frames iframe.active')).contentFrame(); const inner = outer.childFrames().find((f) => /(document|presentation|spreadsheet|pdf)editor\/main/.test(f.url()));
+      if (inner) { if (/spreadsheeteditor|pdfeditor/.test(inner.url())) return; const t = await inner.evaluate(() => document.body.innerText); if (/(Page|Slide) \d+ of \d+/.test(t)) return; }
+    } catch (_) { /* frame still loading */ }
+    await sleep(500);
+  }
+}
+async function waitOpened(timeout = 120000) { await win.waitForFunction(() => !document.getElementById('btnSave').disabled, null, { timeout }); await sleep(1500); await editorReady(); await sleep(1500); }
 async function openFile(folders, file) { await browse(...folders); const t0 = Date.now(); await win.click(`.row:has-text("${file}")`); await waitOpened(); return Date.now() - t0 - 3000; }
 async function waitStatus(re, timeout = 60000) { await win.waitForFunction((s) => new RegExp(s).test(document.getElementById('status').textContent), re.source, { timeout }); }
 async function shortcut(key, shift) { await app.evaluate(({ BrowserWindow }, a) => { const wc = BrowserWindow.getAllWindows()[0].webContents; const m = a.shift ? ['control', 'shift'] : ['control']; wc.sendInputEvent({ type: 'keyDown', keyCode: a.key, modifiers: m }); wc.sendInputEvent({ type: 'keyUp', keyCode: a.key, modifiers: m }); }, { key, shift: !!shift }); }
@@ -480,6 +490,12 @@ async function run(expect = /./, timeout = 120000) {
     await launch(); await sleep(2500); assert((await tabNames()).length === 0, 'restored although switched off: ' + (await tabNames()));
     await win.click('#btnAbout'); await win.check('#setRestore'); await sleep(400); await win.keyboard.press('Escape'); await closeApp(); return n.length + ' tabs restored';
   });
+  await check('Online updates: checked quietly at start, and not at all when switched off', async () => {
+    const last = () => win.evaluate(async () => (await window.office.invoke('update:check', { online: false })).checkedOnlineAt);
+    await launch(); await sleep(3500); assert(await last(), 'no check at start'); await win.click('#homeTab'); await win.click('#btnAbout'); assert(await win.isChecked('#setAutoUpdate'), 'switch should start on');
+    await win.uncheck('#setAutoUpdate'); await sleep(400); await win.keyboard.press('Escape'); await closeApp();
+    await launch(); await sleep(3500); assert(!(await last()), 'checked online although switched off'); await win.click('#homeTab'); await win.click('#btnAbout'); await win.check('#setAutoUpdate'); await sleep(400); await win.keyboard.press('Escape'); await closeApp();
+  });
   await check('Launch with file paths (double-click from Explorer) opens them, PDF included', async () => {
     await launch([od('Created.docx'), od('Second.pdf')]); await win.waitForFunction(() => document.querySelectorAll('#tabs .tab').length === 3, null, { timeout: 60000 }); await waitOpened();
     const n = await tabNames(); assert(n.includes('Created.docx') && n.includes('Second.pdf'), 'tabs ' + n);
@@ -488,29 +504,63 @@ async function run(expect = /./, timeout = 120000) {
     execSync(`${BIN} ${PRE.join(' ')} --no-sandbox ${JSON.stringify(od('Sheet.csv'))}`, { cwd: APP, env: { ...process.env, OneDrive: OD, HOME: path.join(QA, 'home') }, timeout: 30000, stdio: 'ignore' });
     await win.waitForSelector('#tabs .tab:has-text("Sheet.csv")', { timeout: 30000 });
   });
+  await check('Online updates: a newer GitHub release is offered, downloaded, checked and started', async () => {
+    const crypto = require('crypto'); const os = require('os');
+    const payload = Buffer.concat([Buffer.from('MZ'), Buffer.alloc(300000, 7)]); const sha = crypto.createHash('sha256').update(payload).digest('hex');
+    const manifest = { version: '9.9.10', file: 'YourOfficeSuite-Setup-9.9.10.exe', sha256: sha, size: payload.length, notes: '- Faster start\n- Nicer menus' };
+    await app.evaluate(({ session, app: a }, arg) => {
+      const ses = session.fromPartition('yos-update'); global.__urls = []; global.__manifest = arg.manifest; global.__spawn = null; global.__quit = false; global.__realQuit = global.__realQuit || a.quit;
+      ses.fetch = async (url) => { const u = String(url); global.__urls.push(u);
+        if (u.endsWith('/latest.json')) return global.__manifest ? new Response(JSON.stringify(global.__manifest), { status: 200 }) : new Response('', { status: 404 });
+        if (u.includes('/releases/download/')) return new Response(Buffer.from(arg.b64, 'base64'), { status: 200 });
+        return new Response('', { status: 404 }); };
+      process.getBuiltinModule('child_process').spawn = (f, args, o) => { global.__spawn = { f, detached: o && o.detached }; return { unref() {} }; }; a.quit = () => { global.__quit = true; };
+      Object.defineProperty(process, 'platform', { value: 'win32' });
+    }, { manifest, b64: payload.toString('base64') });
+    const setManifest = (m) => app.evaluate((_e, v) => { global.__manifest = v; global.__spawn = null; global.__quit = false; }, m);
+    const checkNow = async () => { await win.click('#homeTab'); await page('start'); await win.click('#btnAbout'); await win.click('#setUpdateCheck'); await win.waitForFunction(() => !/Checking/.test(document.getElementById('setUpdateText').textContent), null, { timeout: 30000 }); const t = await win.textContent('#setUpdateText'); await win.keyboard.press('Escape'); await sleep(300); return t; };
+    const target = path.join(os.tmpdir(), manifest.file); if (fs.existsSync(target)) fs.unlinkSync(target);
+    try {
+      // an older or equal release is not offered
+      await setManifest({ ...manifest, version: '2.3.0', file: 'YourOfficeSuite-Setup-2.3.0.exe' }); let t = await checkNow(); assert(/You have the latest version/.test(t) && await win.isHidden('#updateBar'), 'same version offered: ' + t);
+      // a tampered download is refused
+      await setManifest({ ...manifest, sha256: '0'.repeat(64) }); t = await checkNow(); assert(/Version 9\.9\.10 is ready to install from GitHub/.test(t), t);
+      await stubMsg(0); await win.click('#btnUpdate'); await win.waitForFunction(() => /safety check/.test(document.getElementById('toast').textContent), null, { timeout: 30000 });
+      assert(!(await app.evaluate(() => global.__spawn)) && !fs.existsSync(target), 'a download that failed its check was started or kept');
+      // the real thing: offered, confirmed, downloaded, verified, started
+      await setManifest(manifest); t = await checkNow(); assert(await win.isVisible('#updateBar') && await win.isVisible('#btnUpdateNotes'), 'no banner'); await win.screenshot({ path: path.join(QA, 'v4-update-online.png') });
+      await stubMsg(1); await win.click('#btnUpdate'); await sleep(600); assert(!(await app.evaluate(() => global.__spawn)), 'started without confirming');
+      await stubMsg(0); await win.click('#btnUpdate'); await app.evaluate(() => new Promise((r) => { const i = setInterval(() => { if (global.__spawn) { clearInterval(i); r(); } }, 100); setTimeout(() => { clearInterval(i); r(); }, 20000); })); await sleep(800);
+      const st = await app.evaluate(() => ({ s: global.__spawn, q: global.__quit, urls: global.__urls }));
+      assert(st.s && st.s.f === target && st.s.detached && st.q, JSON.stringify(st.s)); assert(fs.readFileSync(target).equals(payload), 'downloaded file differs');
+      assert(st.urls.includes('https://github.com/aglr-afk/YourOfficeSuite/releases/download/v9.9.10/YourOfficeSuite-Setup-9.9.10.exe') && st.urls.every((u) => /^https:\/\/(github\.com|api\.github\.com)\/(repos\/)?aglr-afk\/YourOfficeSuite\//.test(u)), 'unexpected addresses: ' + [...new Set(st.urls)].join(' '));
+      return `${[...new Set(st.urls)].length} GitHub addresses used, all in this project's repository`;
+    } finally { await setManifest(null); await app.evaluate(() => Object.defineProperty(process, 'platform', { value: 'linux' })); if (fs.existsSync(target)) fs.unlinkSync(target); await checkNow().catch(() => {}); }
+  });
   await check('Updates: a newer setup in the chosen folder is offered and started after confirming', async () => {
     const dir = path.join(OUT, 'updates'); fs.mkdirSync(dir, { recursive: true }); for (const v of ['1.0.0', '9.9.9', '9.1.0']) fs.writeFileSync(path.join(dir, `YourOfficeSuite-Setup-${v}.exe`), 'x'); fs.writeFileSync(path.join(dir, 'Other-Setup-99.0.0.exe'), 'x');
     await win.click('#homeTab'); await page('start'); assert(await win.isHidden('#updateBar'), 'update offered before a folder was chosen');
     await stubOpen([dir]); await win.click('#btnAbout'); await win.click('#setUpdateDir'); await sleep(600); assert(/Version 9\.9\.9 is ready/.test(await win.textContent('#setUpdateText')), await win.textContent('#setUpdateText'));
     await win.keyboard.press('Escape'); assert(await win.isVisible('#updateBar') && /9\.9\.9/.test(await win.textContent('#updateBar')), 'no banner'); await win.screenshot({ path: path.join(QA, 'v3-update.png') });
-    await app.evaluate(({ app: a }) => { global.__spawn = null; process.getBuiltinModule('child_process').spawn = (f, args, o) => { global.__spawn = { f, detached: o && o.detached }; return { unref() {} }; }; a.quit = () => { global.__quit = true; }; });
+    await app.evaluate(({ app: a }) => { global.__spawn = null; global.__quit = false; global.__realQuit = global.__realQuit || a.quit; process.getBuiltinModule('child_process').spawn = (f, args, o) => { global.__spawn = { f, detached: o && o.detached }; return { unref() {} }; }; a.quit = () => { global.__quit = true; }; });
     await stubMsg(1); await win.click('#btnUpdate'); await sleep(500); assert(!(await app.evaluate(() => global.__spawn)), 'started without confirming');
     await stubMsg(0); await win.click('#btnUpdate'); await sleep(600); assert(/only be installed on Windows/.test(await win.textContent('#toast')), 'platform guard: ' + (await win.textContent('#toast')));
     await app.evaluate(() => Object.defineProperty(process, 'platform', { value: 'win32' })); await win.click('#btnUpdate'); await sleep(1200);
     const sp = await app.evaluate(() => ({ s: global.__spawn, q: global.__quit })); await app.evaluate(() => Object.defineProperty(process, 'platform', { value: 'linux' }));
     assert(sp.s && sp.s.f === path.join(dir, 'YourOfficeSuite-Setup-9.9.9.exe') && sp.s.detached && sp.q, JSON.stringify(sp)); return 'offered 9.9.9, ignored 1.0.0 and other files';
   });
-  await check('Privacy: no request left the computer during the whole run', async () => {
+  await check('Privacy: nothing leaves the computer except the GitHub update check', async () => {
     assert(!external.length, external.slice(0, 5).join(' '));
     // The sandbox proxy records every outside connection the app process itself tried to make (not only page requests).
     let tried = [];
-    try { const st = JSON.parse(execSync(`curl -sS "${process.env.HTTPS_PROXY}/__agentproxy/status"`, { timeout: 15000 }).toString()); tried = (st.recentRelayFailures || []).filter((f) => Date.parse(f.ts) > T0).map((f) => f.host); } catch (_) { return 'page requests only 127.0.0.1 (proxy record not readable)'; }
-    assert(!tried.length, 'the app tried to reach: ' + [...new Set(tried)].join(', ')); return 'page requests only 127.0.0.1, and no outside connection attempts by the app';
+    try { const st = JSON.parse(execSync(`curl -sS "${process.env.HTTPS_PROXY}/__agentproxy/status"`, { timeout: 15000 }).toString()); tried = (st.recentRelayFailures || []).filter((f) => Date.parse(f.ts) > T0).map((f) => f.host).filter((h) => !/^(github\.com|api\.github\.com|[a-z0-9-]+\.githubusercontent\.com)(:\d+)?$/i.test(h)); } catch (_) { return 'page requests only 127.0.0.1 (proxy record not readable)'; }
+    assert(!tried.length, 'the app tried to reach: ' + [...new Set(tried)].join(', ')); return 'page requests only 127.0.0.1; the app process reached for nothing except the GitHub update check';
   });
   await check('Stability: no page crashes or converter failures in the log', async () => {
     const bad = logs.filter((l) => /PAGEERR|conversion failed/.test(l)); assert(bad.length <= 1, bad.slice(0, 4).join(' ; ')); return `${logs.length} console errors total`;
   });
 
+  await app.evaluate(({ app: a }) => { if (global.__realQuit) a.quit = global.__realQuit; }).catch(() => {});
   await app.close().catch(() => {});
   const failed = results.filter((r) => !r.ok);
   fs.writeFileSync(path.join(QA, 'results2.json'), JSON.stringify(results, null, 2));

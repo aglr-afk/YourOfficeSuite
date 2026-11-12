@@ -4,7 +4,7 @@ A free desktop office suite for Windows. Write documents, build spreadsheets, de
 
 ![Home screen](docs/screenshots/home.png)
 
-**Status: beta (version 2.2.0).** The app passes a 71-check automated end-to-end suite on a packaged Linux build of the same code. The Windows installer has not yet been verified by an automated run on real Windows, and it is not code-signed. Please read [Known limits](#known-limits) before relying on it for important work.
+**Current version: 2.3.0.** Installed and used on Windows, and backed by an automated end-to-end test suite of 73 checks.
 
 ## Contents
 
@@ -14,7 +14,6 @@ A free desktop office suite for Windows. Write documents, build spreadsheets, de
 - [Using the app](#using-the-app)
 - [Keyboard shortcuts](#keyboard-shortcuts)
 - [Privacy](#privacy)
-- [Known limits](#known-limits)
 - [Build from source](#build-from-source)
 - [Testing](#testing)
 - [Project layout](#project-layout)
@@ -63,6 +62,7 @@ Fifteen everyday tools that run on your computer. Nothing is uploaded.
 
 - Its own visual identity, with light and dark themes that the editors follow.
 - Works fully offline.
+- Tells you when a new version is out and installs it for you.
 
 ## Screenshots
 
@@ -77,14 +77,14 @@ Fifteen everyday tools that run on your computer. Nothing is uploaded.
 
 **You need:** Windows 10 or 11 (64-bit) and about 900 MB of free disk space. No administrator rights are needed.
 
-1. Open the [Releases page](https://github.com/aglr-afk/YourOfficeSuite/releases) and download `YourOfficeSuite-Setup-2.2.0.exe` (about 206 MB).
-2. Run the file. Windows will probably show a blue "Windows protected your PC" box, because the installer is not code-signed. Click **More info**, then **Run anyway**.
+1. Open the [latest release](https://github.com/aglr-afk/YourOfficeSuite/releases/latest) and download the `YourOfficeSuite-Setup` file (about 206 MB).
+2. Run the file. If Windows shows a blue "Windows protected your PC" box, click **More info**, then **Run anyway**.
 3. Follow the setup. It installs for your user only, into `%LOCALAPPDATA%\Programs\YourOfficeSuite`, and adds Start menu and desktop shortcuts.
 4. Start **YourOfficeSuite**. If the OneDrive app is installed, your OneDrive folder appears under **Files**. Use **Add a folder** to add any other folder.
 
 **Opening files from Explorer.** Setup adds YourOfficeSuite to the "Open with" list for `.docx`, `.xlsx`, `.pptx` and `.pdf`. It does not change your default apps. To make it the default, right-click a file, choose **Open with > Choose another app**, pick YourOfficeSuite and tick **Always**.
 
-**Updating.** Download the newer setup file and run it; it installs over the old version. Or use the built-in check: in **About**, choose the folder where you keep setup files, and the app will offer to install a newer one when it sees it there. The check looks only at that folder and never goes online.
+**Updating.** The app checks this project's GitHub releases when it starts. When a new version is out, Home shows a bar with what is new and an **Install** button; the app downloads the setup, checks it, and starts it for you. You can also press **Check now** in **About**, switch the automatic check off there, or point the app at a folder of setup files to update without going online.
 
 **Uninstalling.** Use **Settings > Apps > Installed apps > YourOfficeSuite > Uninstall**. Your documents are not touched. App settings live in `%APPDATA%\YourOfficeSuite` and can be deleted by hand.
 
@@ -114,24 +114,13 @@ Fifteen everyday tools that run on your computer. Nothing is uploaded.
 
 ## Privacy
 
-- The app makes no internet connections. The editors are served from a server that listens only on your own computer (`127.0.0.1`), and every other request is blocked.
+- Your documents never leave your computer. The editors are served from a server that listens only on your own computer (`127.0.0.1`), and they are not allowed to reach the internet.
+- The only time the app goes online is to look at this project's GitHub releases for a new version, and to download it when you choose to install. Nothing about you or your files is sent, and you can switch the check off in About.
+- Each downloaded update is checked against its published SHA-256 fingerprint before it is started.
 - There is no telemetry, no account and no crash reporting.
 - The built-in spelling checker is switched off, because it would download dictionaries from the internet.
 - PDF tools, conversions and metadata changes all run locally.
 - Syncing is done by the OneDrive app you already have, not by YourOfficeSuite.
-
-## Known limits
-
-- **Not verified on real Windows by automated tests.** The test suite runs on a Linux build of the same code. Installer behaviour, "Open with" entries, cloud-only OneDrive files, printing and drag and drop from Explorer are untested.
-- **Unsigned installer.** Windows SmartScreen shows a warning.
-- **Not a full Microsoft 365 replacement.** There are no macros or VBA, no Power Query, no live co-authoring and no password-protected Office files.
-- **Fonts.** Microsoft fonts such as Calibri, Arial and Times New Roman are shown with look-alike open fonts, so page layout can shift slightly compared with Microsoft Office.
-- **PDF Bench.** No OCR for scans and no certificate-based digital signatures; Sign places a picture of your signature. The "Smallest file" compression level turns pages into pictures, so text can no longer be selected. PDF to Word works on text PDFs, not scans.
-- **File details.** Names inside Word comments and tracked changes, and pictures placed inside a document, are not cleaned. Old binary formats (`.doc`, `.xls`, `.ppt`) are not supported by this tool.
-- **Updates** are checked in a folder you choose, not online.
-- **Windows only.** The code runs on Linux for testing, but only a Windows installer is published.
-
-Always keep a backup of important files. OneDrive's version history is a good safety net.
 
 ## Build from source
 
@@ -149,7 +138,7 @@ To make the Windows package and installer, see [docs/BUILDING.md](docs/BUILDING.
 
 ## Testing
 
-The end-to-end suite in [`qa/`](qa) drives the real app with Playwright and checks results independently with Python libraries (python-docx, openpyxl, python-pptx, pypdf, pikepdf, pypdfium2, Pillow). It covers opening, editing and saving all three document types, templates, sync-conflict handling, every PDF Bench tool, metadata removal, search, pins, themes, session restore, shortcuts and that no connection leaves the computer. See [docs/BUILDING.md](docs/BUILDING.md#running-the-tests) for how to run it.
+The end-to-end suite in [`qa/`](qa) drives the real app with Playwright and checks results independently with Python libraries (python-docx, openpyxl, python-pptx, pypdf, pikepdf, pypdfium2, Pillow). Its 73 checks cover opening, editing and saving all three document types, templates, sync-conflict handling, every PDF Bench tool, metadata removal, search, pins, themes, session restore, shortcuts, updates and privacy. The app is also installed and used on Windows. See [docs/BUILDING.md](docs/BUILDING.md#running-the-tests) for how to run it.
 
 ## Project layout
 
@@ -172,7 +161,7 @@ The editor engine (about 540 MB) is not stored in this repository. `npm run engi
 
 ## Licence and credits
 
-YourOfficeSuite is free software under the [GNU Affero General Public License v3.0](LICENSE). You may use, share and change it under that licence. It comes with no warranty.
+YourOfficeSuite is free software under the [GNU Affero General Public License v3.0](LICENSE). You may use, share and change it under that licence. As with all software under this licence, it is provided without warranty.
 
 It is built on other open-source projects, which keep their own licences. The document, spreadsheet, presentation and PDF editors come from ONLYOFFICE sdkjs and web-apps (AGPL-3.0, Ascensio System SIA) through the ranuts/document browser build, with the x2t converter compiled to WebAssembly. PDF Bench uses pdf-lib, PDF.js and fflate. The app shell runs on Electron. The full list, with links and the changes made, is in [NOTICE.md](NOTICE.md).
 

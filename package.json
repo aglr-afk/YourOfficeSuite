@@ -1,6 +1,6 @@
 {
   "name": "yourofficesuite",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "description": "A free office suite for documents, spreadsheets, presentations and PDFs",
   "author": "YourOfficeSuite",
   "license": "AGPL-3.0",
@@ -10,7 +10,8 @@
     "engine": "bash scripts/get-engine.sh",
     "pack:win": "electron-builder --win dir --x64",
     "pack:linux": "electron-builder --linux dir --x64",
-    "templates": "python3 build/make_templates.py"
+    "templates": "python3 build/make_templates.py",
+    "latest-json": "python3 scripts/make-latest-json.py"
   },
   "devDependencies": {
     "electron": "^33.2.0",
