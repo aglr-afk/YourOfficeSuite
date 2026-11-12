@@ -1,0 +1,106 @@
+[
+ {
+  "id": "resume",
+  "kind": "docx",
+  "name": "Resume",
+  "desc": "Clean one-page CV",
+  "file": "docx/resume.docx",
+  "thumb": "thumbs/resume.jpg"
+ },
+ {
+  "id": "letter",
+  "kind": "docx",
+  "name": "Business letter",
+  "desc": "Formal letter with letterhead",
+  "file": "docx/letter.docx",
+  "thumb": "thumbs/letter.jpg"
+ },
+ {
+  "id": "report",
+  "kind": "docx",
+  "name": "Report",
+  "desc": "Cover page, findings and table",
+  "file": "docx/report.docx",
+  "thumb": "thumbs/report.jpg"
+ },
+ {
+  "id": "meeting-notes",
+  "kind": "docx",
+  "name": "Meeting notes",
+  "desc": "Agenda, decisions, action items",
+  "file": "docx/meeting-notes.docx",
+  "thumb": "thumbs/meeting-notes.jpg"
+ },
+ {
+  "id": "proposal",
+  "kind": "docx",
+  "name": "Proposal",
+  "desc": "Goal, approach, timeline and cost",
+  "file": "docx/proposal.docx",
+  "thumb": "thumbs/proposal.jpg"
+ },
+ {
+  "id": "budget",
+  "kind": "xlsx",
+  "name": "Monthly budget",
+  "desc": "Income, spending and a chart",
+  "file": "xlsx/budget.xlsx",
+  "thumb": "thumbs/budget.jpg"
+ },
+ {
+  "id": "invoice",
+  "kind": "xlsx",
+  "name": "Invoice",
+  "desc": "Totals and tax work themselves out",
+  "file": "xlsx/invoice.xlsx",
+  "thumb": "thumbs/invoice.jpg"
+ },
+ {
+  "id": "project-tracker",
+  "kind": "xlsx",
+  "name": "Project tracker",
+  "desc": "Tasks, owners, status, progress",
+  "file": "xlsx/project-tracker.xlsx",
+  "thumb": "thumbs/project-tracker.jpg"
+ },
+ {
+  "id": "timesheet",
+  "kind": "xlsx",
+  "name": "Timesheet",
+  "desc": "Hours and pay for the week",
+  "file": "xlsx/timesheet.xlsx",
+  "thumb": "thumbs/timesheet.jpg"
+ },
+ {
+  "id": "todo",
+  "kind": "xlsx",
+  "name": "To-do list",
+  "desc": "Tasks with priority and dates",
+  "file": "xlsx/todo.xlsx",
+  "thumb": "thumbs/todo.jpg"
+ },
+ {
+  "id": "pitch-deck",
+  "kind": "pptx",
+  "name": "Pitch deck",
+  "desc": "Seven slides for investors",
+  "file": "pptx/pitch-deck.pptx",
+  "thumb": "thumbs/pitch-deck.jpg"
+ },
+ {
+  "id": "business-review",
+  "kind": "pptx",
+  "name": "Business review",
+  "desc": "Highlights, wins, plan",
+  "file": "pptx/business-review.pptx",
+  "thumb": "thumbs/business-review.jpg"
+ },
+ {
+  "id": "minimal",
+  "kind": "pptx",
+  "name": "Minimal",
+  "desc": "Light and simple",
+  "file": "pptx/minimal.pptx",
+  "thumb": "thumbs/minimal.jpg"
+ }
+]

@@ -1,0 +1,36 @@
+YourOfficeSuite is free software. You may use it, share it and change it under the
+GNU Affero General Public License, version 3 (AGPL-3.0).
+
+It is built with these open-source projects, each under its own licence:
+
+  Document, spreadsheet, presentation and PDF editors
+    sdkjs and web-apps        AGPL-3.0     Copyright (c) Ascensio System SIA
+                                           github.com/ONLYOFFICE/sdkjs, github.com/ONLYOFFICE/web-apps
+    document (browser build)  AGPL-3.0     github.com/ranuts/document
+    x2t converter (wasm)      AGPL-3.0     github.com/cryptpad/onlyoffice-x2t-wasm
+
+  PDF Bench
+    pdf-lib                   MIT          github.com/cantoo-scribe/pdf-lib
+    fflate                    MIT          github.com/101arrowz/fflate
+    PDF.js                    Apache-2.0   github.com/mozilla/pdf.js
+
+  App shell
+    Electron                  MIT          github.com/electron/electron
+    Inter typeface            OFL-1.1      github.com/rsms/inter
+    Caveat typeface           OFL-1.1      github.com/googlefonts/caveat
+
+  Document fonts (Liberation, Carlito, Caladea, DejaVu, Noto and others) are under the
+  SIL Open Font License or similar free licences.
+
+Changes made to the editor components for this app: brand colours and loading screens,
+font table entries for bold and italic Calibri, an uncompressed converter file, and a
+local pass-through service worker.
+
+Source code: the app shell ships unminified inside the installed app (resources/app.asar),
+and the editor components are available from the project pages listed above.
+
+Names of other products mentioned here are trademarks of their owners. YourOfficeSuite is an
+independent project and is not affiliated with or endorsed by Ascensio System SIA, Microsoft
+or Adobe.
+
+This program comes with no warranty, to the extent permitted by law.

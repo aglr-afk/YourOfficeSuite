@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'wasm-unsafe-eval'; frame-src 'self'; img-src 'self' data: blob:; font-src 'self' data:; worker-src 'self' blob:; connect-src 'self' blob: data:">
+<title>YourOfficeSuite</title>
+<link rel="stylesheet" href="shell.css">
+</head>
+<body>
+<svg xmlns="http://www.w3.org/2000/svg" class="sprite" aria-hidden="true">
+  <defs>
+    <linearGradient id="g-brand" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6246f5"/><stop offset=".55" stop-color="#a848f6"/><stop offset="1" stop-color="#f4548c"/></linearGradient>
+  </defs>
+  <g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="M4 11.2 12 4l8 7.2V19a1 1 0 0 1-1 1h-4.5v-5.5h-5V20H5a1 1 0 0 1-1-1z"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3.5 7.5a2 2 0 0 1 2-2h3.6l2 2.2h7.4a2 2 0 0 1 2 2v7.8a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/></symbol>
+    <symbol id="i-grid" viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1.6"/><rect x="13" y="4" width="7" height="7" rx="1.6"/><rect x="4" y="13" width="7" height="7" rx="1.6"/><rect x="13" y="13" width="7" height="7" rx="1.6"/></symbol>
+    <symbol id="i-pdf" viewBox="0 0 24 24"><path d="M7 3.5h7l4.5 4.5v11a1.5 1.5 0 0 1-1.5 1.5H7A1.5 1.5 0 0 1 5.500 19V5A1.5 1.5 0 0 1 7 3.500z"/><path d="M14 3.500V8h4.500"/><path d="M8.500 16.500c2.500-1 4-4 3.500-6-.4-1.300-1.700-.6-1.200 1 .700 2.300 2.800 4 5 4.200"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.500"/><path d="M12 11v5.500M12 7.800v.2"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-doc" viewBox="0 0 24 24"><path d="M7 3.500h7l4.500 4.500v11a1.500 1.500 0 0 1-1.500 1.500H7A1.500 1.500 0 0 1 5.500 19V5A1.500 1.500 0 0 1 7 3.500z"/><path d="M14 3.500V8h4.500M8.800 12.500h6.400M8.800 16h4.400"/></symbol>
+    <symbol id="i-sheet" viewBox="0 0 24 24"><rect x="4" y="4.500" width="16" height="15" rx="2"/><path d="M4 9.500h16M4 14.500h16M10 4.500v15"/></symbol>
+    <symbol id="i-slides" viewBox="0 0 24 24"><rect x="3.500" y="5" width="17" height="11.500" rx="2"/><path d="M12 16.500V20M8.500 20h7M8 12.500l2.500-3 2.300 2 3.200-3.500"/></symbol>
+    <symbol id="i-open" viewBox="0 0 24 24"><path d="M12 15.500V4.500M7.500 8.500 12 4l4.500 4.500M5 14.500V18a1.500 1.500 0 0 0 1.500 1.500h11A1.500 1.500 0 0 0 19 18v-3.500"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.500"/><path d="M12 7.500V12l3 2"/></symbol>
+    <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M7.500 18.500a4 4 0 0 1-.6-7.950 5.500 5.500 0 0 1 10.600 1.200 3.400 3.400 0 0 1-.5 6.750z"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M6.500 6.500l11 11M17.500 6.500l-11 11"/></symbol>
+    <symbol id="i-merge" viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="9" rx="1.500"/><rect x="13" y="4" width="7" height="9" rx="1.500"/><path d="M7.500 13v2.500a2 2 0 0 0 2 2H12m4.500-4.500v2.500a2 2 0 0 1-2 2H12m0 0V21m-2-2 2 2 2-2"/></symbol>
+    <symbol id="i-split" viewBox="0 0 24 24"><rect x="4" y="3.500" width="16" height="7" rx="1.500"/><rect x="4" y="13.500" width="16" height="7" rx="1.500"/><path d="M2.500 12h2M7 12h2M11.500 12h2M16 12h2M20.500 12h1" stroke-dasharray="0"/></symbol>
+    <symbol id="i-organize" viewBox="0 0 24 24"><rect x="3.500" y="5" width="6.500" height="8.500" rx="1.300"/><rect x="14" y="5" width="6.500" height="8.500" rx="1.300"/><path d="M5 18.500h14M16.500 16l2.500 2.500-2.500 2.500M7.500 16 5 18.500 7.500 21"/></symbol>
+    <symbol id="i-compress" viewBox="0 0 24 24"><path d="M12 3.500v6M9.500 7 12 9.500 14.500 7M12 20.500v-6M9.500 17l2.500-2.500 2.500 2.500M4.500 12h15"/></symbol>
+    <symbol id="i-sign" viewBox="0 0 24 24"><path d="M3.500 17.500c2.500-5 4.500-8.500 6-8.500 2 0-1.500 7 .5 7 1.500 0 2-3 3.500-3 1.200 0 .5 2.500 2 2.500 1 0 2-.8 3-1.500M3.500 20.500h17"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4.500 19.500l1-4L16 5a1.800 1.800 0 0 1 2.600 0l.4.400a1.800 1.800 0 0 1 0 2.600L8.500 18.500zM14.500 6.500l3 3"/></symbol>
+    <symbol id="i-image" viewBox="0 0 24 24"><rect x="3.500" y="5" width="17" height="14" rx="2"/><circle cx="9" cy="10" r="1.600"/><path d="M4 17l4.500-4.500 3.500 3.500 3-3 5 5"/></symbol>
+    <symbol id="i-convert" viewBox="0 0 24 24"><path d="M4.500 9h13M14.500 5.500 18 9l-3.500 3.500M19.500 15h-13M9.500 11.500 6 15l3.500 3.500"/></symbol>
+    <symbol id="i-watermark" viewBox="0 0 24 24"><path d="M12 3.500c3 4 5.500 6.800 5.500 10a5.500 5.500 0 0 1-11 0c0-3.200 2.500-6 5.500-10z"/></symbol>
+    <symbol id="i-hash" viewBox="0 0 24 24"><path d="M9.500 4 8 20M16 4l-1.500 16M4.500 9h15M4 15h15"/></symbol>
+    <symbol id="i-up" viewBox="0 0 24 24"><path d="M6.500 14.500 12 9l5.500 5.500"/></symbol>
+    <symbol id="i-down" viewBox="0 0 24 24"><path d="M6.500 9.500 12 15l5.500-5.500"/></symbol>
+    <symbol id="i-rotate" viewBox="0 0 24 24"><path d="M19.500 12a7.500 7.500 0 1 1-2.400-5.500M19.500 4.500v4h-4"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M5 7h14M9.500 7V5h5v2M7 7l.8 12a1.500 1.500 0 0 0 1.500 1.400h5.400a1.500 1.500 0 0 0 1.500-1.400L17 7"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="M14.500 6.500 9 12l5.500 5.500"/></symbol>
+    <symbol id="i-text" viewBox="0 0 24 24"><path d="M5 6.500h14M12 6.500v12M9 18.500h6"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.500l4.500 4.500L19 7.500"/></symbol>
+    <symbol id="i-tag" viewBox="0 0 24 24"><path d="M4 12.300V5.500A1.500 1.500 0 0 1 5.500 4h6.800a1.500 1.500 0 0 1 1.060.440l6.200 6.200a1.500 1.500 0 0 1 0 2.120l-6.800 6.800a1.500 1.500 0 0 1-2.120 0l-6.200-6.200A1.500 1.500 0 0 1 4 12.300z"/><circle cx="8.500" cy="8.500" r="1.300"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.500"/><path d="M16 16l4 4"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.800"/><path d="M12 3.500v2M12 18.500v2M3.500 12h2M18.500 12h2M6 6l1.400 1.400M16.600 16.600 18 18M6 18l1.400-1.400M16.600 7.400 18 6"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M19.500 14.200A7.800 7.800 0 0 1 9.800 4.500a7.800 7.800 0 1 0 9.700 9.700z"/></symbol>
+    <symbol id="i-auto" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 4v16M12 7.500l5.500 5.500M12 12l4 4"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M9 4.500h6l-1 5 3 3.500H7l3-3.500zM12 13v6.500"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8.500" y="8.500" width="11" height="11" rx="2"/><path d="M15.500 8.500V6.500a2 2 0 0 0-2-2h-7a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h2"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5.500" y="10.500" width="13" height="9.500" rx="2"/><path d="M8.500 10.500V8a3.500 3.500 0 0 1 7 0v2.500"/></symbol>
+    <symbol id="i-unlock" viewBox="0 0 24 24"><rect x="5.500" y="10.500" width="13" height="9.500" rx="2"/><path d="M8.500 10.500V8a3.500 3.500 0 0 1 6.700-1.400"/></symbol>
+    <symbol id="i-keyboard" viewBox="0 0 24 24"><rect x="3.500" y="6.500" width="17" height="11" rx="2"/><path d="M7 10h.01M10.500 10h.01M14 10h.01M17 10h.01M7.500 14h9"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4.500v11M7.500 11.500 12 16l4.500-4.500M5 19.500h14"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M19.500 12a7.500 7.500 0 1 1-2.400-5.500M19.500 4.500v4h-4"/></symbol>
+  </g>
+</svg>
+
+<header id="bar">
+  <div id="tabs" role="tablist">
+    <button class="tab home active" id="homeTab" role="tab" title="Home"><img src="icon.png" alt=""><span>YourOfficeSuite</span></button>
+  </div>
+  <div id="actions">
+    <span id="status" aria-live="polite"></span>
+    <button id="btnTheme" class="btn ghost icon" title="Theme"><svg><use href="#i-auto"/></svg></button>
+    <label id="autoWrap" title="Save changes back to the file a few seconds after you stop editing"><input type="checkbox" id="autosave" checked><span class="switch"></span>Autosave</label>
+    <button id="btnSave" class="btn primary" disabled title="Save (Ctrl+S)">Save</button>
+    <button id="btnSaveAs" class="btn ghost" disabled title="Save as (Ctrl+Shift+S)">Save as</button>
+  </div>
+</header>
+
+<main id="stage">
+  <section id="home" class="view active">
+    <nav id="rail" aria-label="Sections">
+      <button class="nav active" data-page="start"><svg><use href="#i-home"/></svg><span>Home</span></button>
+      <button class="nav" data-page="files"><svg><use href="#i-folder"/></svg><span>Files</span></button>
+      <button class="nav" data-page="templates"><svg><use href="#i-grid"/></svg><span>Templates</span></button>
+      <button class="nav" data-page="pdf"><svg><use href="#i-pdf"/></svg><span>PDF Bench</span></button>
+      <div class="rail-gap"></div>
+      <button class="nav" id="btnAbout"><svg><use href="#i-info"/></svg><span>About</span></button>
+    </nav>
+
+    <div id="pages">
+      <!-- Home -->
+      <div class="page active" id="page-start">
+        <div class="hero">
+          <div>
+            <h1 id="greeting">Welcome</h1>
+            <p>Documents, spreadsheets, slides and PDFs in one place. Your files stay on your computer and sync through your OneDrive.</p>
+          </div>
+          <button class="btn glass" id="btnOpen"><svg><use href="#i-open"/></svg>Open a file</button>
+        </div>
+        <div id="updateBar" hidden><svg><use href="#i-download"/></svg><span></span><button class="btn primary" id="btnUpdate">Install</button></div>
+        <label class="searchbar"><svg><use href="#i-search"/></svg><input id="search" type="search" placeholder="Search all your files by name" aria-label="Search all your files by name" autocomplete="off"></label>
+        <div id="searchBox" hidden><div class="sec-row"><h2 class="sec" id="searchTitle">Results</h2><button class="link" id="searchClear">Clear search</button></div><div id="searchGrid"></div></div>
+        <h2 class="sec">Start something new</h2>
+        <div class="create">
+          <button class="card-new docx" data-new="docx"><i><svg><use href="#i-doc"/></svg></i><b>Document</b><span>Letters, reports, notes</span></button>
+          <button class="card-new xlsx" data-new="xlsx"><i><svg><use href="#i-sheet"/></svg></i><b>Spreadsheet</b><span>Budgets, lists, trackers</span></button>
+          <button class="card-new pptx" data-new="pptx"><i><svg><use href="#i-slides"/></svg></i><b>Presentation</b><span>Decks and pitches</span></button>
+          <button class="card-new tpl" data-goto="templates"><i><svg><use href="#i-grid"/></svg></i><b>From a template</b><span>Ready-made designs</span></button>
+          <button class="card-new pdf" data-goto="pdf"><i><svg><use href="#i-pdf"/></svg></i><b>PDF Bench</b><span>Merge, sign, compress</span></button>
+        </div>
+        <div id="pinSec" hidden><h2 class="sec">Pinned</h2><div id="pinGrid"></div></div>
+        <div class="sec-row"><h2 class="sec">Recent</h2><button class="link" data-goto="files">Browse all files</button></div>
+        <div id="recentGrid"></div>
+      </div>
+
+      <!-- Files -->
+      <div class="page" id="page-files">
+        <aside id="side">
+          <div class="side-title">Locations</div>
+          <div id="roots"></div>
+          <button class="link" id="btnAddFolder"><svg><use href="#i-plus"/></svg>Add a folder</button>
+        </aside>
+        <div id="browser">
+          <div id="crumbRow">
+            <nav id="crumbs" aria-label="Folder path"></nav>
+            <input id="filter" type="search" placeholder="Filter this folder" aria-label="Filter files">
+            <button class="btn ghost" id="btnRefresh" title="Refresh"><svg><use href="#i-refresh"/></svg></button>
+          </div>
+          <div id="listHead"><span>Name</span><span>Modified</span><span>Size</span></div>
+          <div id="list" role="list"></div>
+        </div>
+      </div>
+
+      <!-- Templates -->
+      <div class="page" id="page-templates">
+        <div class="page-head">
+          <div><h1>Templates</h1><p>Pick a design, make it yours. Each one opens as a new file.</p></div>
+          <div class="seg" id="tplFilter" role="tablist">
+            <button class="on" data-kind="all">All</button><button data-kind="docx">Documents</button><button data-kind="xlsx">Spreadsheets</button><button data-kind="pptx">Presentations</button>
+          </div>
+        </div>
+        <div id="tplGrid"></div>
+      </div>
+
+      <!-- PDF Bench -->
+      <div class="page" id="page-pdf">
+        <div id="pdfHome">
+          <div class="page-head"><div><h1>PDF Bench</h1><p>Everyday PDF and file jobs, done on your computer. Nothing is uploaded. Right-click any file in the app to send it here.</p></div></div>
+          <div id="pdfTools"></div>
+        </div>
+        <div id="pdfTool" hidden></div>
+      </div>
+    </div>
+  </section>
+  <div id="frames"></div>
+</main>
+
+<div id="ctx" role="menu" hidden></div>
+<div id="modal" hidden><div class="sheet" role="dialog" aria-modal="true"></div></div>
+<div id="toast" role="status"></div>
+<script src="vendor/pdf-lib.min.js"></script>
+<script src="vendor/fflate.js"></script>
+<script src="metadata.js"></script>
+<script src="shell.js"></script>
+<script type="module" src="pdfbench.js"></script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+node_modules/
+engine/
+.engine-src/
+release/
+release-linux/
+qa/od/
+qa/out/
+qa/home/
+qa/*.png
+qa/*.log
+qa/results*.json
+*.log
+.DS_Store

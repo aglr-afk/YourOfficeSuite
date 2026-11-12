@@ -1,0 +1,84 @@
+{
+  "name": "yourofficesuite",
+  "version": "2.2.0",
+  "description": "A free office suite for documents, spreadsheets, presentations and PDFs",
+  "author": "YourOfficeSuite",
+  "license": "AGPL-3.0",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "engine": "bash scripts/get-engine.sh",
+    "pack:win": "electron-builder --win dir --x64",
+    "pack:linux": "electron-builder --linux dir --x64",
+    "templates": "python3 build/make_templates.py"
+  },
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8",
+    "resedit": "^2.0.3"
+  },
+  "build": {
+    "appId": "com.yourofficesuite.app",
+    "productName": "YourOfficeSuite",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "shell/**"
+    ],
+    "extraResources": [
+      {
+        "from": "engine",
+        "to": "engine"
+      }
+    ],
+    "afterPack": "build/afterPack.js",
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico",
+      "signAndEditExecutable": false,
+      "fileAssociations": [
+        {
+          "ext": "docx",
+          "name": "Word Document",
+          "role": "Editor"
+        },
+        {
+          "ext": "xlsx",
+          "name": "Excel Workbook",
+          "role": "Editor"
+        },
+        {
+          "ext": "pptx",
+          "name": "PowerPoint Presentation",
+          "role": "Editor"
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "YourOfficeSuite",
+      "artifactName": "YourOfficeSuite-Setup-${version}.exe",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico"
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aglr-afk/YourOfficeSuite.git"
+  },
+  "homepage": "https://github.com/aglr-afk/YourOfficeSuite"
+}

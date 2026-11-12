@@ -1,0 +1,33 @@
+
+/* ===== YourOfficeSuite brand layer (appended at build time) ===== */
+body:not(.theme-type-dark) {
+  --toolbar-header-document: #14121c !important; --toolbar-header-spreadsheet: #14121c !important; --toolbar-header-presentation: #14121c !important; --toolbar-header-pdf: #14121c !important; --toolbar-header-visio: #14121c !important;
+  --text-toolbar-header-on-background-document: #2e2942 !important; --text-toolbar-header-on-background-spreadsheet: #2e2942 !important; --text-toolbar-header-on-background-presentation: #2e2942 !important; --text-toolbar-header-on-background-pdf: #2e2942 !important; --text-toolbar-header-on-background-visio: #2e2942 !important;
+  --text-toolbar-header: #f1eefc !important; --icon-toolbar-header: #f1eefc !important;
+  --background-normal: #ffffff !important; --background-toolbar: #fbfaff !important; --background-toolbar-additional: #f3f0fb !important; --background-pane: #fbfaff !important;
+  --background-primary-dialog-button: #7c5cfc !important; --background-accent-button: #7c5cfc !important; --background-contrast-popover: #ffffff !important;
+  --background-notification-popover: #f1ecff !important; --background-notification-badge: #f4548c !important; --background-fill-button: #7c5cfc !important;
+  --highlight-button-hover: #ece7fb !important; --highlight-button-pressed: #7c5cfc !important; --highlight-button-pressed-hover: #6846ee !important;
+  --highlight-primary-dialog-button-hover: #6846ee !important; --highlight-primary-dialog-button-pressed: #5a3ae0 !important;
+  --highlight-header-button-hover: rgba(255,255,255,0.12) !important; --highlight-header-button-pressed: rgba(255,255,255,0.2) !important;
+  --highlight-fill-button-hover: #6846ee !important; --highlight-fill-button-pressed: #5a3ae0 !important; --highlight-text-select: #7c5cfc !important;
+  --highlight-toolbar-tab-underline-document: #7c5cfc !important; --highlight-toolbar-tab-underline-spreadsheet: #0fb2c9 !important; --highlight-toolbar-tab-underline-presentation: #f0568c !important; --highlight-toolbar-tab-underline-pdf: #f59e0b !important; --highlight-toolbar-tab-underline-visio: #7c5cfc !important;
+  --highlight-header-tab-underline-document: #a995ff !important; --highlight-header-tab-underline-spreadsheet: #4fd6e8 !important; --highlight-header-tab-underline-presentation: #ff8db3 !important; --highlight-header-tab-underline-pdf: #ffc24d !important; --highlight-header-tab-underline-visio: #a995ff !important;
+  --border-toolbar: #e7e3f3 !important; --border-divider: #e7e3f3 !important; --border-regular-control: #d9d4ea !important; --border-preview-hover: #c9c1ea !important; --border-preview-select: #7c5cfc !important; --border-control-focus: #7c5cfc !important; --border-button-pressed-focus: #5a3ae0 !important;
+  --text-normal: #1b1830 !important; --text-secondary: #6b6784 !important; --text-tertiary: #a6a2bd !important; --text-link: #5a3ae0 !important; --text-link-hover: #6846ee !important; --text-link-active: #5a3ae0 !important; --text-link-visited: #5a3ae0 !important;
+  --icon-normal: #2a2640 !important; --canvas-background: #efecf8 !important; --canvas-page-border: #ddd8ee !important; --canvas-ruler-border: #e2def0 !important; --canvas-ruler-margins-background: #e9e5f5 !important;
+  --canvas-scroll-thumb: #f7f5fd !important; --canvas-scroll-thumb-hover: #e9e4f9 !important; --canvas-scroll-thumb-border: #cfc8e6 !important; --canvas-scroll-thumb-border-hover: #b9afe0 !important;
+}
+body.theme-type-dark {
+  --toolbar-header-document: #0e0c14 !important; --toolbar-header-spreadsheet: #0e0c14 !important; --toolbar-header-presentation: #0e0c14 !important; --toolbar-header-pdf: #0e0c14 !important; --toolbar-header-visio: #0e0c14 !important;
+  --background-primary-dialog-button: #7c5cfc !important; --background-accent-button: #7c5cfc !important; --highlight-primary-dialog-button-hover: #6846ee !important; --highlight-primary-dialog-button-pressed: #5a3ae0 !important;
+  --highlight-toolbar-tab-underline-document: #a995ff !important; --highlight-toolbar-tab-underline-spreadsheet: #4fd6e8 !important; --highlight-toolbar-tab-underline-presentation: #ff8db3 !important; --highlight-toolbar-tab-underline-pdf: #ffc24d !important;
+  --border-control-focus: #a995ff !important; --border-preview-select: #a995ff !important; --text-link: #b9a8ff !important; --text-link-hover: #cfc3ff !important;
+}
+/* softer, rounder controls */
+.toolbar .btn-toolbar, .btn-toolbar, .btn.btn-toolbar, .combobox .form-control, .form-control, .btn.btn-text-default, .dropdown-menu, .asc-window, .btn-category { border-radius: 6px !important; }
+.dropdown-menu, .asc-window { box-shadow: 0 10px 34px rgba(27,24,48,.18) !important; border-color: var(--border-toolbar) !important; }
+.asc-window .header { border-radius: 6px 6px 0 0; }
+/* the app has its own About and licence screens */
+#fm-btn-about, #fm-btn-help, li#fm-btn-about, li#fm-btn-help, #left-btn-about, #btn-menu-about, #about-menu-panel, #left-btn-support, #fm-btn-suggest { display: none !important; }
+.statusbar #status-sheets-bar .nav-tabs>li.active>span, .statusbar #status-sheets-bar .nav-tabs>li.selected>span { box-shadow: 0 4px 0 #0fb2c9 inset !important; }
