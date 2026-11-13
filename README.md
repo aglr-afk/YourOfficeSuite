@@ -2,6 +2,8 @@
 
 **Live website:** [yourofficesuite-website.vercel.app](https://yourofficesuite-website.vercel.app/)
 
+**Built with:** Claude Fable 5.2.
+
 A free desktop office suite for Windows. Write documents, build spreadsheets, design presentations and handle PDFs in one app. Your files stay on your own computer and sync through your own OneDrive folder. There is no account, no ads and no tracking.
 
 ![Home screen](docs/screenshots/home.png)
