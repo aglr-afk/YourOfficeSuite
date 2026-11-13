@@ -8,9 +8,9 @@ A free desktop office suite for Windows. Write documents, build spreadsheets, de
 
 ## Watch the demo
 
-[![Watch the 35-second demo of YourOfficeSuite](docs/media/demo-poster.jpg)](https://yourofficesuite-website.vercel.app/#tour)
+https://github.com/user-attachments/assets/ec547ac3-94cc-4669-b3b6-752f8acd816b
 
-*35 seconds. Click to watch it on the website, or [download the MP4](docs/media/YourOfficeSuite-demo.mp4).*
+*35 seconds. Press play above, or [download the MP4](docs/media/YourOfficeSuite-demo.mp4).*
 
 ![Home screen](docs/screenshots/home.png)
 
