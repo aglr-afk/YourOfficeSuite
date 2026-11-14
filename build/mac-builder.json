@@ -1,0 +1,22 @@
+{
+  "appId": "com.yourofficesuite.app",
+  "productName": "YourOfficeSuite",
+  "directories": { "output": "release-mac" },
+  "files": ["main.js", "preload.js", "shell/**"],
+  "extraResources": [{ "from": "engine", "to": "engine" }],
+  "mac": {
+    "target": [{ "target": "dir", "arch": ["arm64", "x64"] }],
+    "icon": "build/icon.icns",
+    "identity": null,
+    "category": "public.app-category.productivity",
+    "minimumSystemVersion": "11.0",
+    "darkModeSupport": true,
+    "extendInfo": { "NSHumanReadableCopyright": "Free software under AGPL-3.0" },
+    "fileAssociations": [
+      { "ext": "docx", "name": "Word Document", "role": "Editor", "rank": "Alternate" },
+      { "ext": "xlsx", "name": "Excel Workbook", "role": "Editor", "rank": "Alternate" },
+      { "ext": "pptx", "name": "PowerPoint Presentation", "role": "Editor", "rank": "Alternate" },
+      { "ext": "pdf", "name": "PDF Document", "role": "Viewer", "rank": "Alternate" }
+    ]
+  }
+}

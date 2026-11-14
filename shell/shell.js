@@ -55,7 +55,7 @@
       const c1 = el('input'); c1.type = 'checkbox'; c1.id = 'setRestore'; c1.checked = state.settings.restore; c1.addEventListener('change', async () => { state.settings = await api.invoke('settings:set', { restore: c1.checked }); }); l1.append(d1, c1);
       const l2 = el('div', 'line'); const d2 = el('div'); const upText = el('span', '', updateText()); upText.id = 'setUpdateText'; d2.append(el('b', '', 'Updates'), upText);
       const b2 = el('div'); b2.style.display = 'flex'; b2.style.gap = '6px'; b2.style.flex = 'none';
-      const pick = el('button', 'btn', state.settings.updateDir ? 'Change folder' : 'Choose folder'); pick.id = 'setUpdateDir'; const chk = el('button', 'btn', 'Check now'); chk.id = 'setUpdateCheck';
+      const pick = el('button', 'btn', state.settings.updateDir ? 'Change folder' : 'Choose folder'); pick.id = 'setUpdateDir'; if (MAC) pick.style.display = 'none'; const chk = el('button', 'btn', 'Check now'); chk.id = 'setUpdateCheck';
       pick.addEventListener('click', async () => { const r = await api.invoke('settings:pickUpdateDir'); if (r) { state.settings = r.settings; state.update = r.update; pick.textContent = 'Change folder'; upText.textContent = updateText(); renderUpdate(); } });
       chk.addEventListener('click', async () => { chk.disabled = true; upText.textContent = 'Checking…'; try { state.update = await api.invoke('update:check', { online: true }); } catch (_) { /* shown as no update */ } chk.disabled = false; upText.textContent = updateText(true); renderUpdate(); });
       b2.append(pick, chk); l2.append(d2, b2);
@@ -72,21 +72,24 @@
   }
   function updateText(manual) {
     const u = state.update || {};
+    if (u.available && MAC) return `Version ${u.version} is available on GitHub.`;
     if (u.available) return `Version ${u.version} is ready to install${u.source === 'online' ? ' from GitHub.' : `. Folder: ${state.settings.updateDir}`}`;
     if (manual && u.onlineError) return u.onlineError;
     if (u.folderError) return u.folderError;
     const when = u.checkedOnlineAt ? ` Last checked ${fmtTime(u.checkedOnlineAt)}.` : '';
-    return `You have the latest version.${when}${state.settings.updateDir ? ` Updates folder: ${state.settings.updateDir}` : ' You can also choose a folder to pick up setup files from.'}`;
+    return `You have the latest version.${when}${state.settings.updateDir ? ` Updates folder: ${state.settings.updateDir}` : (MAC ? '' : ' You can also choose a folder to pick up setup files from.')}`;
   }
   let updating = false;
   function renderUpdate() {
     const bar = $('updateBar'); const u = state.update || {}; bar.hidden = !u.available;
     if (!u.available || updating) return;
     bar.querySelector('span').textContent = `Version ${u.version} of YourOfficeSuite is ready to install.`;
-    $('btnUpdateNotes').hidden = !u.page; $('btnUpdate').disabled = false; $('btnUpdate').textContent = 'Install';
+    $('btnUpdateNotes').hidden = !u.page; $('btnUpdate').disabled = false; $('btnUpdate').textContent = MAC ? 'Download' : 'Install';
+    if (MAC) bar.querySelector('span').textContent = `Version ${u.version} of YourOfficeSuite is available.`;
   }
   async function installUpdate() {
     const u = state.update || {}; if (!u.available || updating) return;
+    if (MAC) { try { await api.invoke('update:install', u.version); } catch (e) { toast(errText(e), true); } return; }
     if (state.tabs.some((t) => t.dirty)) { toast('Save your open files first, then install the update.', true); return; }
     const notes = u.notes ? `\n\nWhat is new:\n${u.notes.split('\n').filter((l) => l.trim()).slice(0, 12).join('\n')}` : '';
     const r = await api.invoke('dlg:message', { type: 'question', buttons: ['Install now', 'Later'], defaultId: 0, cancelId: 1, title: 'Install update',
@@ -98,8 +101,10 @@
     catch (e) { toast(errText(e), true); }
     updating = false; renderUpdate();
   }
+  const MAC = /Mac/i.test(navigator.platform || '');
+  if (MAC) document.querySelectorAll('[title*="Ctrl"]').forEach((n) => { n.title = n.title.replace(/Ctrl/g, 'Cmd'); });
   const SHORTCUTS = [['Ctrl + N', 'New document'], ['Ctrl + O', 'Open a file'], ['Ctrl + S', 'Save'], ['Ctrl + Shift + S', 'Save as'], ['Ctrl + W', 'Close the current tab'],
-    ['Ctrl + Tab', 'Next tab'], ['Ctrl + Shift + Tab', 'Previous tab'], ['Ctrl + 1', 'Go to Home'], ['Ctrl + 2 to 9', 'Go to that tab'], ['F1', 'Show this list'], ['Esc', 'Close a menu or window']];
+    ['Ctrl + Tab', 'Next tab'], ['Ctrl + Shift + Tab', 'Previous tab'], ['Ctrl + 1', 'Go to Home'], ['Ctrl + 2 to 9', 'Go to that tab'], ['F1', 'Show this list'], ['Esc', 'Close a menu or window']].map(([k, v]) => [MAC ? k.replace(/Ctrl/g, 'Cmd') : k, v]);
   function showShortcuts() {
     openModal((s) => {
       const h = el('div', 'about-top'); const tt = el('div'); tt.append(el('h1', '', 'Keyboard shortcuts'), el('span', '', 'These work anywhere in the app')); h.append(tt);
@@ -110,7 +115,7 @@
 
   // ---------- theme ----------
   const THEME_NEXT = { system: 'light', light: 'dark', dark: 'system' };
-  const THEME_UI = { system: ['i-auto', 'Theme: follows Windows'], light: ['i-sun', 'Theme: light'], dark: ['i-moon', 'Theme: dark'] };
+  const THEME_UI = { system: ['i-auto', MAC ? 'Theme: follows macOS' : 'Theme: follows Windows'], light: ['i-sun', 'Theme: light'], dark: ['i-moon', 'Theme: dark'] };
   function renderTheme() { const b = $('btnTheme'); const [ic, title] = THEME_UI[state.settings.theme] || THEME_UI.system; b.textContent = ''; b.append(icon(ic)); b.title = `${title}. Click to change.`; b.dataset.theme = state.settings.theme; }
   async function cycleTheme() { state.settings = await api.invoke('settings:set', { theme: THEME_NEXT[state.settings.theme] || 'light' }); renderTheme(); toast(THEME_UI[state.settings.theme][1]); }
 
@@ -280,7 +285,7 @@
   function createTab({ name, path, kind, saveExt, mtimeMs, sourceDir }) {
     const id = uid();
     const tabEl = el('button', 'tab'); tabEl.setAttribute('role', 'tab');
-    const x = el('span', 'x', '×'); x.title = 'Close (Ctrl+W)'; x.setAttribute('role', 'button');
+    const x = el('span', 'x', '×'); x.title = MAC ? 'Close (Cmd+W)' : 'Close (Ctrl+W)'; x.setAttribute('role', 'button');
     tabEl.append(el('span', 'ico'), el('span', 'name'), el('span', 'dot'), x);
     const iframe = editorFrame();
     const t = { id, name, path: path || null, kind, saveExt, mtimeMs: mtimeMs || null, sourceDir: sourceDir || null, dirty: false,

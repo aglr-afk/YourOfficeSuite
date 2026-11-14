@@ -131,6 +131,13 @@ async function findRoots() {
     const p = process.env[v];
     if (p) await add(path.basename(p), p, 'onedrive');
   }
+  if (process.platform === 'darwin') {
+    // On a Mac the OneDrive app keeps its folders under ~/Library/CloudStorage.
+    const cloud = path.join(os.homedir(), 'Library', 'CloudStorage');
+    try {
+      for (const name of await fsp.readdir(cloud)) { if (/^OneDrive/i.test(name)) await add(name, path.join(cloud, name), 'onedrive'); }
+    } catch (_) { /* no cloud folders */ }
+  }
   try {
     for (const e of await fsp.readdir(os.homedir(), { withFileTypes: true })) {
       if (e.isDirectory() && /^OneDrive/i.test(e.name)) await add(e.name, path.join(os.homedir(), e.name), 'onedrive');
@@ -187,7 +194,7 @@ const verOf = (name) => { const m = SETUP_RE.exec(name); return m ? m.slice(1).m
 const newer = (a, b) => { for (let i = 0; i < 3; i++) { if (a[i] !== b[i]) return a[i] > b[i]; } return false; };
 async function checkFolder() {
   const dir = settings.updateDir;
-  if (!dir) return { configured: false, available: false };
+  if (!dir || process.platform === 'darwin') return { configured: false, available: false };
   const cur = app.getVersion().split('.').map(Number); let best = null;
   try {
     for (const name of await fsp.readdir(dir)) { const v = verOf(name); if (v && newer(v, cur) && (!best || newer(v, best.v))) best = { v, name }; }
@@ -319,7 +326,7 @@ function registerIpc() {
       restore = { files: (Array.isArray(last.open) ? last.open : []).filter((f) => typeof f === 'string' && fs.existsSync(f)).slice(0, 20), active: last.active || null };
     }
     return { baseUrl, roots: await findRoots(), recent: await readJson('recent.json', []), pendingFiles: pending, restore,
-      version: app.getVersion(), sep: path.sep, settings: settingsView(), update: await checkUpdate() };
+      version: app.getVersion(), sep: path.sep, platform: process.platform, settings: settingsView(), update: await checkUpdate() };
   });
 
   handle('settings:get', async () => settingsView());
@@ -369,6 +376,11 @@ function registerIpc() {
   handle('update:install', async (version) => {
     const offer = lastOffer;
     if (!offer || !offer.available || offer.version !== version) throw new Error('That update is no longer available.');
+    if (process.platform === 'darwin') {
+      // A Mac gets the new version from its release page.
+      if (offer.page && offer.page.startsWith(`https://github.com/${UPDATE_REPO}/`)) { shell.openExternal(offer.page); return { started: false, page: true }; }
+      throw new Error('That update is no longer available.');
+    }
     if (process.platform !== 'win32') throw new Error('Updates can only be installed on Windows.');
     let file = offer.file;
     if (offer.source === 'online') file = await downloadUpdate(offer);
@@ -511,6 +523,19 @@ function registerIpc() {
 }
 
 // ---------- window ----------
+// Windows and Linux run without a menu bar. A Mac needs one for Quit, Hide and the standard editing keys.
+function setAppMenu() {
+  if (process.platform !== 'darwin') { Menu.setApplicationMenu(null); return; }
+  const send = (cmd) => () => { if (win) win.webContents.send('cmd', cmd); };
+  try { app.setAboutPanelOptions({ applicationName: 'YourOfficeSuite', applicationVersion: app.getVersion(), copyright: 'Free software under AGPL-3.0' }); } catch (_) { /* ignore */ }
+  Menu.setApplicationMenu(Menu.buildFromTemplate([
+    { label: 'YourOfficeSuite', submenu: [{ role: 'about', label: 'About YourOfficeSuite' }, { type: 'separator' }, { role: 'hide', label: 'Hide YourOfficeSuite' }, { role: 'hideOthers' }, { role: 'unhide' }, { type: 'separator' }, { role: 'quit', label: 'Quit YourOfficeSuite' }] },
+    { label: 'File', submenu: [{ label: 'New Document', click: send('new') }, { label: 'Open…', click: send('open') }, { type: 'separator' }, { label: 'Save', click: send('save') }, { label: 'Save As…', click: send('saveAs') }, { type: 'separator' }, { label: 'Close Tab', click: send('closeTab') }] },
+    { label: 'Edit', submenu: [{ role: 'undo' }, { role: 'redo' }, { type: 'separator' }, { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'selectAll' }] },
+    { label: 'Window', submenu: [{ role: 'minimize' }, { role: 'zoom' }, { role: 'togglefullscreen' }] },
+    { label: 'Help', submenu: [{ label: 'Keyboard Shortcuts', click: send('shortcuts') }] },
+  ]));
+}
 function createWindow() {
   win = new BrowserWindow({
     width: 1400, height: 900, minWidth: 900, minHeight: 600, show: false,
@@ -518,7 +543,7 @@ function createWindow() {
     icon: path.join(SHELL_DIR, 'icon.png'),
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true, spellcheck: false },
   });
-  Menu.setApplicationMenu(null);
+  setAppMenu();
   win.once('ready-to-show', () => { win.maximize(); win.show(); });
 
   // Shortcuts work even while keyboard focus is inside an editor frame.
@@ -592,6 +617,13 @@ if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
   pendingFiles = officeArgs(process.argv.slice(1));
+  // A Mac hands over files opened from Finder through this event, before or after the window exists.
+  app.on('open-file', (event, file) => {
+    event.preventDefault();
+    const files = officeArgs([file]); if (!files.length) return;
+    if (win) { if (win.isMinimized()) win.restore(); win.focus(); win.webContents.send('open-files', files); }
+    else pendingFiles.push(...files);
+  });
   app.on('second-instance', (_e, argv) => {
     const files = officeArgs(argv.slice(1));
     if (win) {

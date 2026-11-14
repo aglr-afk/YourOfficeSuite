@@ -4,7 +4,7 @@
 
 **Built with:** Claude Fable 5.2.
 
-A free desktop office suite for Windows. Write documents, build spreadsheets, design presentations and handle PDFs in one app. Your files stay on your own computer and sync through your own OneDrive folder. There is no account, no ads and no tracking.
+A free desktop office suite for Windows and macOS. Write documents, build spreadsheets, design presentations and handle PDFs in one app. Your files stay on your own computer and sync through your own OneDrive folder. There is no account, no ads and no tracking.
 
 ## Watch the demo
 
@@ -22,6 +22,7 @@ https://github.com/user-attachments/assets/ec547ac3-94cc-4669-b3b6-752f8acd816b
 - [What it does](#what-it-does)
 - [Screenshots](#screenshots)
 - [Install on Windows](#install-on-windows)
+- [Install on macOS](#install-on-macos)
 - [Using the app](#using-the-app)
 - [Keyboard shortcuts](#keyboard-shortcuts)
 - [Privacy](#privacy)
@@ -99,6 +100,28 @@ Fifteen everyday tools that run on your computer. Nothing is uploaded.
 
 **Uninstalling.** Use **Settings > Apps > Installed apps > YourOfficeSuite > Uninstall**. Your documents are not touched. App settings live in `%APPDATA%\YourOfficeSuite` and can be deleted by hand.
 
+## Install on macOS
+
+**You need:** macOS 11 or newer and about 900 MB of free disk space.
+
+1. Open the [latest release](https://github.com/aglr-afk/YourOfficeSuite/releases/latest) and download the zip for your Mac: `mac-arm64` for Apple Silicon (M1 and newer), `mac-x64` for Intel.
+2. Double-click the zip, then drag **YourOfficeSuite** into your **Applications** folder.
+3. Before the first start, open **Terminal** and run this once, so macOS lets an app from outside the App Store open:
+
+   ```bash
+   xattr -cr /Applications/YourOfficeSuite.app
+   ```
+
+4. Start **YourOfficeSuite**. If the OneDrive app is installed, your OneDrive folder appears under **Files**. Use **Add a folder** to add any other folder.
+
+**Opening files from Finder.** Right-click a `.docx`, `.xlsx`, `.pptx` or `.pdf` file and choose **Open With > YourOfficeSuite**.
+
+**Updating.** The app checks this project's GitHub releases when it starts. When a new version is out, Home shows a bar with a **Download** button that takes you to it.
+
+**Shortcuts.** Use `Cmd` in place of `Ctrl`.
+
+**Uninstalling.** Drag YourOfficeSuite from Applications to the Bin. Your documents are not touched.
+
 ## Using the app
 
 - **Start a file:** pick Document, Spreadsheet or Presentation on Home, or choose a design under Templates.
@@ -106,7 +129,7 @@ Fifteen everyday tools that run on your computer. Nothing is uploaded.
 - **Save:** `Ctrl+S` saves to the same file. New files ask where to save the first time. Autosave can be switched off in the top bar.
 - **PDF tools:** open PDF Bench, pick a tool and choose a file, or right-click a file anywhere in the app and pick the tool from the menu.
 - **Replace the original:** most PDF tools save a new copy. Tick **Replace the original file** if you want the old version overwritten; the app asks before it does.
-- **Theme:** the button in the top bar switches between following Windows, light and dark.
+- **Theme:** the button in the top bar switches between following your system, light and dark.
 
 ## Keyboard shortcuts
 
@@ -145,7 +168,7 @@ npm run engine      # builds the editor engine and applies this project's change
 npm start           # run the app from source
 ```
 
-To make the Windows package and installer, see [docs/BUILDING.md](docs/BUILDING.md).
+To make the Windows installer and the macOS apps, see [docs/BUILDING.md](docs/BUILDING.md).
 
 ## Testing
 

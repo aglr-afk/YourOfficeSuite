@@ -6,6 +6,7 @@
 - One-click install: the setup is downloaded, checked against its SHA-256 fingerprint and started for you.
 - "What is new" link to the release page, and a switch in About to turn the automatic check off.
 - The folder-based update check stays available for offline use.
+- macOS apps for Apple Silicon and Intel: Mac menu bar, Cmd shortcuts, OneDrive folder detection, opening files from Finder.
 
 ## 2.2.0
 

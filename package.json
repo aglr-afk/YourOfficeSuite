@@ -10,6 +10,7 @@
     "engine": "bash scripts/get-engine.sh",
     "pack:win": "electron-builder --win dir --x64",
     "pack:linux": "electron-builder --linux dir --x64",
+    "pack:mac": "electron-builder --mac --config build/mac-builder.json",
     "templates": "python3 build/make_templates.py",
     "latest-json": "python3 scripts/make-latest-json.py"
   },

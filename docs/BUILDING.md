@@ -56,6 +56,21 @@ Compression takes several minutes. The version number is set in two places: `pac
 
 If you have a code-signing certificate, sign `release/win-unpacked/YourOfficeSuite.exe` before step 4 and the setup file after it, for example with `signtool` on Windows.
 
+## macOS apps
+
+```bash
+npm run pack:mac
+```
+
+This makes `release-mac/mac-arm64/YourOfficeSuite.app` (Apple Silicon) and `release-mac/mac/YourOfficeSuite.app` (Intel). It runs on Linux and macOS. Zip each app with links kept, and attach both zips to the release:
+
+```bash
+(cd release-mac/mac-arm64 && zip -qry ../YourOfficeSuite-<version>-mac-arm64.zip YourOfficeSuite.app)
+(cd release-mac/mac && zip -qry ../YourOfficeSuite-<version>-mac-x64.zip YourOfficeSuite.app)
+```
+
+The settings are in `build/mac-builder.json`. To sign and notarise with an Apple Developer ID, build on a Mac and set `identity` there.
+
 ## 5. Publish a release
 
 The app learns about new versions from a small `latest.json` file attached to each GitHub release.
