@@ -200,3 +200,6 @@ YourOfficeSuite is free software under the [GNU Affero General Public License v3
 It is built on other open-source projects, which keep their own licences. The document, spreadsheet, presentation and PDF editors come from ONLYOFFICE sdkjs and web-apps (AGPL-3.0, Ascensio System SIA) through the ranuts/document browser build, with the x2t converter compiled to WebAssembly. PDF Bench uses pdf-lib, PDF.js and fflate. The app shell runs on Electron. The full list, with links and the changes made, is in [NOTICE.md](NOTICE.md).
 
 YourOfficeSuite is an independent project. It is not affiliated with or endorsed by Ascensio System SIA, Microsoft or Adobe. Product names mentioned here are trademarks of their owners.
+
+### Contact
+[Email Me](mailto:agnivabuilds@proton.me)
