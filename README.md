@@ -1,6 +1,6 @@
 # YourOfficeSuite
 
-**Live website:** [yourofficesuite-website.vercel.app](https://yourofficesuite-website.vercel.app/)
+**Live website:** [www.yourofficesuite.com](https://www.yourofficesuite.com/)
 
 **Built with:** Claude Fable 5.2.
 
