@@ -8,9 +8,9 @@ A free desktop office suite for Windows and macOS. Write documents, build spread
 
 ## Watch the demo
 
-https://github.com/user-attachments/assets/ec547ac3-94cc-4669-b3b6-752f8acd816b
+https://github.com/user-attachments/assets/ff52cefe-8715-47ec-897e-0474db99d2eb
 
-*35 seconds. Press play above, or [download the MP4](docs/media/YourOfficeSuite-demo.mp4).*
+*Press play above to watch the demo.*
 
 ![Home screen](docs/screenshots/home.png)
 
