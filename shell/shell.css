@@ -280,3 +280,46 @@ h1, h2, p { margin: 0; }
 #toast.show { opacity: 1; transform: translate(-50%, 0); }
 #toast.err { background: var(--danger); }
 @media (max-width: 980px) { .tool-body { grid-template-columns: 1fr; } .tool-side { position: static; } }
+
+/* ---------- PDF Bench, part 2: page stage, boxes, compare, crop, editor ---------- */
+.player { position: absolute; inset: 0; line-height: 1.2; --pt: 1px; touch-action: none; }
+.player.draw { cursor: crosshair; }
+.pager .sep { width: 14px; } .pager .zoomb { width: 30px; height: 30px; padding: 0; font-size: 16px; } .pager .zooml { min-width: 42px; text-align: center; font-size: 12px; }
+.pbox { position: absolute; box-sizing: border-box; cursor: move; touch-action: none; }
+.pbox .bx { position: absolute; right: -9px; top: -9px; width: 18px; height: 18px; border-radius: 50%; border: 0; background: var(--danger); color: #fff; font-size: 13px; line-height: 18px; padding: 0; display: none; cursor: pointer; z-index: 3; }
+.pbox:hover .bx, .pbox:focus-within .bx { display: block; }
+.pbox .h { position: absolute; right: -6px; bottom: -6px; width: 12px; height: 12px; border-radius: 50%; background: var(--accent); border: 2px solid #fff; cursor: nwse-resize; z-index: 3; }
+.pbox.ghost { pointer-events: none; opacity: .6; }
+.rbox { background: #000; outline: 1.5px solid var(--accent); outline-offset: 1px; } .rbox.white { background: #fff; outline-color: #c62828; }
+.ehl { background: rgba(255, 219, 51, .45); mix-blend-mode: multiply; outline: 1px dashed rgba(180, 140, 0, .8); }
+.esig { border: 1.5px dashed var(--accent); border-radius: 4px; } .esig img { width: 100%; height: 100%; display: block; pointer-events: none; }
+.emark { outline: 1px dashed transparent; } .emark:hover { outline-color: var(--accent); } .emark svg { width: 100%; height: 100%; display: block; pointer-events: none; }
+.etext { cursor: default; outline: 1px dashed transparent; white-space: nowrap; } .etext:hover, .etext:focus-within { outline-color: var(--accent); }
+.etext .etx { font-family: Helvetica, Arial, sans-serif; line-height: 1.2; min-width: 1.5em; min-height: 1.2em; white-space: pre; outline: none; cursor: text; }
+.etext .grip { position: absolute; left: -16px; top: 0; width: 14px; font-size: 12px; line-height: 14px; color: var(--accent); cursor: move; display: none; user-select: none; }
+.etext:hover .grip, .etext:focus-within .grip { display: block; }
+.fout { position: absolute; box-sizing: border-box; border: 1.5px solid rgba(110, 86, 247, .65); background: rgba(110, 86, 247, .08); border-radius: 3px; padding: 0 3px; cursor: pointer; font: 500 calc(var(--pt) * 9) Helvetica, Arial, sans-serif; color: #14121c; text-align: left; overflow: hidden; white-space: nowrap; }
+.fout.set { background: rgba(255, 255, 255, .92); } .fout.ro { border-style: dashed; cursor: default; } .fout:hover { background: rgba(110, 86, 247, .2); }
+.etools { margin-bottom: 12px; flex-wrap: wrap; }
+.eform { display: flex; flex-direction: column; gap: 10px; max-height: 300px; overflow: auto; padding-right: 4px; } .eform textarea.field { height: 64px; padding: 7px 11px; resize: vertical; }
+.pane { display: flex; flex-direction: column; gap: 14px; } .pane[hidden] { display: none; }
+.mgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.cmask { position: absolute; background: rgba(20, 18, 28, .55); pointer-events: none; }
+.cmp-slots { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: center; margin-bottom: 16px; }
+.cmp-slot { border: 1.5px dashed var(--line-2); border-radius: 16px; background: var(--panel); padding: 22px 16px; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; min-width: 0; }
+.cmp-slot.has { border-style: solid; border-color: var(--accent); } .cmp-slot.over { background: var(--accent-soft); }
+.cmp-slot .nm { color: var(--muted); font-size: 12.5px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cmp-sum { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; } .cmp-sum .add { background: #dff5e6; color: #156b2f; } .cmp-sum .del { background: #fde8ec; color: #b3261e; }
+.cmp-list { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.chg { display: flex; gap: 10px; align-items: flex-start; text-align: left; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); color: var(--text); }
+.chg:hover { border-color: var(--accent); } .chg .chip { flex: none; } .chg .tx { font-size: 12.5px; line-height: 1.5; min-width: 0; overflow-wrap: anywhere; user-select: text; }
+.chg del { background: #fde8ec; color: #b3261e; padding: 0 2px; border-radius: 3px; } .chg ins { background: #dff5e6; color: #156b2f; text-decoration: none; padding: 0 2px; border-radius: 3px; }
+.cmp-pages { margin-top: 12px; } .cmp-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: start; }
+.cmp-col { display: flex; flex-direction: column; gap: 8px; min-width: 0; } .cmp-col .pstage { display: block; }
+.cmark { position: absolute; mix-blend-mode: multiply; border-radius: 2px; } .cmark.del { background: rgba(242, 64, 77, .38); } .cmark.ins { background: rgba(38, 199, 89, .38); }
+@media (prefers-color-scheme: dark) {
+  .cmp-sum .add, .chg ins { background: rgba(38, 199, 89, .22); color: #8ee6a8; }
+  .cmp-sum .del, .chg del { background: rgba(242, 64, 77, .22); color: #ff9aa5; }
+}
+.cmp-same { border-radius: 12px; padding: 12px 13px; background: var(--accent-soft); color: var(--accent-text); font-weight: 500; font-size: 12.5px; }
+#pdfTool [hidden] { display: none !important; }

@@ -14,7 +14,7 @@ https://github.com/user-attachments/assets/ff52cefe-8715-47ec-897e-0474db99d2eb
 
 ![Home screen](docs/screenshots/home.png)
 
-**Current version: 2.3.0.** Installed and used on Windows, and backed by an automated end-to-end test suite of 73 checks.
+**Current version: 2.4.0.** Installed and used on Windows, and backed by an automated end-to-end test suite of 91 checks.
 
 ## Contents
 
@@ -50,7 +50,7 @@ https://github.com/user-attachments/assets/ff52cefe-8715-47ec-897e-0474db99d2eb
 
 ### PDF Bench
 
-Fifteen everyday tools that run on your computer. Nothing is uploaded.
+Twenty-two everyday tools that run on your computer. Nothing is uploaded.
 
 | Tool | What it does |
 | --- | --- |
@@ -59,16 +59,23 @@ Fifteen everyday tools that run on your computer. Nothing is uploaded.
 | Organise pages | Reorder, rotate and delete pages |
 | Compress | Two levels: keep text selectable, or smallest possible file |
 | Sign | Draw, type or upload a signature and place it on the page |
-| Edit and annotate | Add text, highlights, notes and fill in forms |
+| Edit and annotate | Add text, highlights, ticks, crosses and your signature, fill in forms and lock them |
+| Redact PDF | Black out names, numbers, emails and phone numbers so they are removed for good |
+| Compare PDF | See every word added or removed between two versions, and save a marked-up copy |
 | Word, Excel, PowerPoint to PDF | Convert documents to PDF |
 | PDF to Word | Turn a text PDF into an editable document |
 | PDF to images | Save pages as JPG or PNG |
-| Images to PDF | Combine pictures into one PDF |
+| PDF to Text | Save all the text as a `.txt` file, or save every image inside the PDF |
+| Images to PDF | Combine pictures into one PDF, including iPhone photos (HEIC) |
+| HEIC to PDF | Turn iPhone photos into one PDF |
 | Watermark | Stamp text across every page |
 | Page numbers | Number the pages |
+| Crop PDF | Trim the margins, by hand or found for you, or fit every page to A4, Letter, A5 or Legal |
+| Flatten PDF | Turn the whole PDF into images so nothing can be edited, or lock only forms and comments |
+| Black & white PDF | Turn colour pages grey to save ink |
 | Protect with a password | Lock a PDF with AES-256 encryption |
 | Unlock | Remove a password you know |
-| File details (metadata) | See, remove or add hidden details such as author, company, camera and GPS location in PDF, Word, Excel, PowerPoint, JPG and PNG files |
+| File details (metadata) | See, remove or add hidden details such as author, company, camera and GPS location in PDF, Word, Excel, PowerPoint, JPG and PNG files. Also removes AI labels (Content Credentials) from JPG and PNG pictures |
 
 ### Look and feel
 
@@ -172,7 +179,7 @@ To make the Windows installer and the macOS apps, see [docs/BUILDING.md](docs/BU
 
 ## Testing
 
-The end-to-end suite in [`qa/`](qa) drives the real app with Playwright and checks results independently with Python libraries (python-docx, openpyxl, python-pptx, pypdf, pikepdf, pypdfium2, Pillow). Its 73 checks cover opening, editing and saving all three document types, templates, sync-conflict handling, every PDF Bench tool, metadata removal, search, pins, themes, session restore, shortcuts, updates and privacy. The app is also installed and used on Windows. See [docs/BUILDING.md](docs/BUILDING.md#running-the-tests) for how to run it.
+The end-to-end suite in [`qa/`](qa) drives the real app with Playwright and checks results independently with Python libraries (python-docx, openpyxl, python-pptx, pypdf, pikepdf, pypdfium2, Pillow). Its 91 checks cover opening, editing and saving all three document types, templates, sync-conflict handling, every PDF Bench tool, metadata removal, search, pins, themes, session restore, shortcuts, updates and privacy. The app is also installed and used on Windows. See [docs/BUILDING.md](docs/BUILDING.md#running-the-tests) for how to run it.
 
 ## Project layout
 
@@ -182,9 +189,10 @@ preload.js         The small bridge the window is allowed to use
 shell/             The app window: Home, Files, Templates, PDF Bench
   shell.js         Tabs, saving, search, pins, right-click menu, themes
   pdfbench.js      PDF tools
+  pdfbench-extra.js  Redact, Compare, PDF to Text, Crop, Flatten, Black & white, Edit and annotate
   metadata.js      File details reader and writer
   templates/       Starter templates and their previews
-  vendor/          pdf-lib, PDF.js and fflate
+  vendor/          pdf-lib, PDF.js, fflate and heic-to
 build/             Icon, brand colour layer, template generator, installer script
 scripts/           Engine download, build and patch scripts
 qa/                End-to-end test suite and fixtures
@@ -197,6 +205,6 @@ The editor engine (about 540 MB) is not stored in this repository. `npm run engi
 
 YourOfficeSuite is free software under the [GNU Affero General Public License v3.0](LICENSE). You may use, share and change it under that licence. As with all software under this licence, it is provided without warranty.
 
-It is built on other open-source projects, which keep their own licences. The document, spreadsheet, presentation and PDF editors come from ONLYOFFICE sdkjs and web-apps (AGPL-3.0, Ascensio System SIA) through the ranuts/document browser build, with the x2t converter compiled to WebAssembly. PDF Bench uses pdf-lib, PDF.js and fflate. The app shell runs on Electron. The full list, with links and the changes made, is in [NOTICE.md](NOTICE.md).
+It is built on other open-source projects, which keep their own licences. The document, spreadsheet, presentation and PDF editors come from ONLYOFFICE sdkjs and web-apps (AGPL-3.0, Ascensio System SIA) through the ranuts/document browser build, with the x2t converter compiled to WebAssembly. PDF Bench uses pdf-lib, PDF.js, fflate and heic-to (with libheif). The app shell runs on Electron. The full list, with links and the changes made, is in [NOTICE.md](NOTICE.md).
 
 YourOfficeSuite is an independent project. It is not affiliated with or endorsed by Ascensio System SIA, Microsoft or Adobe. Product names mentioned here are trademarks of their owners.

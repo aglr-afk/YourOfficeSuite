@@ -9,7 +9,16 @@ const { PDFDocument, PDFName, PDFRawStream, PDFArray, PDFNumber, PDFDict, degree
 const Y = window.YOS;
 const { api, el, icon, toast, errText, fmtSize, baseName, dirName, stemOf, extOf } = Y;
 const $ = (id) => document.getElementById(id);
-const IMG_EXT = ['png', 'jpg', 'jpeg', 'webp', 'bmp', 'gif'];
+const IMG_EXT = ['png', 'jpg', 'jpeg', 'webp', 'bmp', 'gif', 'heic', 'heif'];
+const isHeic = (name) => /\.(heic|heif)$/i.test(name);
+// iPhone photos (HEIC / HEIF) are turned into JPEG with a decoder that ships inside the app and loads only when needed.
+async function heicToJpeg(bytes, name) {
+  try {
+    const { heicTo } = await import('./vendor/heic-to/heic-to.js');
+    const out = await heicTo({ blob: new Blob([bytes], { type: 'image/heic' }), type: 'image/jpeg', quality: 0.92 });
+    return new Uint8Array(await out.arrayBuffer());
+  } catch (_) { throw new Error(`${name} could not be opened. It may be damaged or not a HEIC photo.`); }
+}
 const OFFICE_EXT = ['docx', 'xlsx', 'pptx', 'doc', 'xls', 'ppt', 'odt', 'ods', 'odp', 'rtf', 'txt', 'csv'];
 
 // ---------------------------------------------------------------- file helpers
@@ -84,13 +93,14 @@ function textPng(text, { px = 64, color = '#000', font = '600 64px Inter, Arial,
   g.fillText(text, 4, h / 2);
   return { canvas: c, w: c.width, h };
 }
-async function renderPage(view, n, { scale, maxDim } = {}) {
+async function renderPage(view, n, { scale, maxDim, forms } = {}) {
   const page = await view.getPage(n);
   let vp = page.getViewport({ scale: scale || 1 });
   if (maxDim && Math.max(vp.width, vp.height) > maxDim) vp = page.getViewport({ scale: (scale || 1) * maxDim / Math.max(vp.width, vp.height) });
   const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(vp.width)); c.height = Math.max(1, Math.round(vp.height));
   const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
-  await page.render({ canvasContext: g, viewport: vp }).promise;
+  // forms: also paint filled-in form fields, comments and stamps onto the canvas
+  await page.render(forms ? { canvasContext: g, viewport: vp, annotationMode: pdfjs.AnnotationMode.ENABLE } : { canvasContext: g, viewport: vp }).promise;
   const base = page.getViewport({ scale: 1 });
   page.cleanup();
   return { canvas: c, ptW: base.width, ptH: base.height, scale: vp.scale };
@@ -227,7 +237,7 @@ async function opToImages(bytes, { format, dpi }, name, tick) {
 async function opFromImages(files, { size }, tick) {
   const out = await PDFDocument.create(); let i = 0;
   for (const f of files) {
-    const ext = extOf(f.name); let img;
+    const ext = f.asJpeg ? 'jpg' : extOf(f.name); let img;
     if (ext === 'jpg' || ext === 'jpeg') { try { img = await out.embedJpg(f.bytes); } catch (_) { img = null; } }
     if (!img && ext === 'png') { try { img = await out.embedPng(f.bytes); } catch (_) { img = null; } }
     if (!img) {
@@ -459,7 +469,8 @@ const TOOLS = [
   { id: 'office2pdf', icon: 'i-convert', name: 'Word, Excel, PowerPoint to PDF', desc: 'Turn documents into PDFs', long: 'Convert documents, spreadsheets and presentations to PDF. Each PDF is saved next to its original.', mount: mountOffice },
   { id: 'pdf2word', icon: 'i-doc', name: 'PDF to Word', desc: 'Get an editable document', long: 'Turn a PDF into a Word document you can edit. Works best on PDFs made from text, not scans.', mount: mountToWord },
   { id: 'pdf2img', icon: 'i-image', name: 'PDF to images', desc: 'Save pages as JPG or PNG', long: 'Save every page of a PDF as a picture.', mount: mountToImages },
-  { id: 'img2pdf', icon: 'i-image', name: 'Images to PDF', desc: 'Photos and scans into one PDF', long: 'Combine pictures into a single PDF, one per page.', mount: mountFromImages },
+  { id: 'img2pdf', icon: 'i-image', name: 'Images to PDF', desc: 'Photos and scans into one PDF', long: 'Combine pictures into a single PDF, one per page. Works with JPG, PNG, WebP and iPhone photos (HEIC).', mount: mountFromImages },
+  { id: 'heic2pdf', icon: 'i-image', name: 'HEIC to PDF', desc: 'iPhone photos into one PDF', long: 'Turn iPhone photos (HEIC or HEIF) into a single PDF, one per page. You can mix in JPG and PNG pictures too.', pick: 'Choose HEIC photos', pickHint: 'HEIC, HEIF, JPG, PNG or WebP', mount: mountFromImages },
   { id: 'watermark', icon: 'i-watermark', name: 'Watermark', desc: 'Stamp text across every page', long: 'Add a text stamp such as DRAFT or CONFIDENTIAL across every page.', mount: mountWatermark },
   { id: 'pagenum', icon: 'i-hash', name: 'Page numbers', desc: 'Number the pages', long: 'Add page numbers to every page.', mount: mountPageNumbers },
   { id: 'protect', icon: 'i-lock', name: 'Protect with a password', desc: 'Lock a PDF so only you can open it', long: 'Add a password that is needed to open the PDF.', mount: mountProtect },
@@ -578,10 +589,24 @@ function mountPageNumbers(tool) {
 function mountFromImages(tool) {
   const { main, side } = workspace(tool); const files = []; const list = el('div', 'flist'); let render = () => {}; let run;
   const sync = () => { side.hidden = !files.length; zone.style.display = files.length ? 'none' : ''; more.style.display = files.length ? '' : 'none'; if (run) run.enable(files.length >= 1); };
-  const add = async (paths) => { for (const p of paths) { const f = await guard(() => readFile(p)); if (f) { f.kind = 'pptx'; f.icon = 'i-image'; files.push(f); } } render(); sync(); };
-  const zone = dropZone({ kind: 'image', multi: true, title: 'Choose pictures', hint: 'JPG, PNG, WebP, BMP or GIF', onPaths: add });
+  const note = el('div', 'hint'); note.id = 'heicNote'; note.hidden = true;
+  const add = async (paths) => {
+    const heic = paths.filter((p) => isHeic(baseName(p))).length; let k = 0;
+    for (const p of paths) {
+      const f = await guard(() => readFile(p)); if (!f) continue;
+      if (isHeic(f.name)) {
+        note.hidden = false; note.textContent = `Opening ${heic} HEIC photo${heic > 1 ? 's' : ''}… (${++k} of ${heic})`;
+        // a damaged photo shows a clear message and is left out of the list
+        const jpg = await guard(() => heicToJpeg(f.bytes, f.name)); if (!jpg) continue;
+        f.bytes = jpg; f.asJpeg = true;
+      }
+      f.kind = 'pptx'; f.icon = 'i-image'; files.push(f);
+    }
+    note.hidden = true; render(); sync();
+  };
+  const zone = dropZone({ kind: 'image', multi: true, title: tool.pick || 'Choose pictures', hint: tool.pickHint || 'JPG, PNG, WebP, HEIC, BMP or GIF', onPaths: add });
   const more = btn('btn addmore', 'Add more pictures', 'i-plus'); more.addEventListener('click', async () => { const p = await api.invoke('dlg:open', { kind: 'image', multi: true }); if (p.length) add(p); });
-  main.append(zone, list, more);
+  main.append(zone, note, list, more);
   const size = select([['fit', 'Same size as each picture'], ['a4', 'A4 pages']], 'a4'); side.append(el('h3', '', 'Pages'), field('Page size', size), el('div', 'hint', 'One picture per page, from top to bottom.'));
   render = fileList(list, files, { onChange: sync });
   run = runner(side, 'Create PDF', async (r) => {
@@ -744,10 +769,52 @@ function mountUnlock(tool) {
   const init = takeInitial(); if (init) load(init[0]);
 }
 
-async function mountEdit() {
-  const init = takeInitial(); if (init) { Y.openFile(init[0]); return; }
-  const p = await api.invoke('dlg:open', { kind: 'pdf', multi: false, title: 'Choose a PDF to edit' });
-  if (p.length) Y.openFile(p[0]);
+// Edit and annotate lives in pdfbench-extra.js, which replaces this placeholder when it loads.
+function mountEdit(tool) { const t = TOOLS.find((x) => x.id === 'edit'); if (t && t.mount !== mountEdit) t.mount(tool); }
+
+// The signature maker (draw, type or picture), shared by Sign and by Edit and annotate.
+function signaturePad(ids) {
+  // signature maker
+  const tabs = el('div', 'seg sig-tabs'); const modes = [['draw', 'Draw'], ['type', 'Type'], ['image', 'Picture']]; let mode = 'draw';
+  const padC = el('canvas', 'sigpad'); padC.id = ids.pad; const typed = el('input', 'field'); typed.placeholder = 'Type your name'; typed.id = ids.type; typed.maxLength = 40;
+  const pick = btn('btn', 'Choose a picture'); const ink = select([['#14121c', 'Black ink'], ['#1b3a8c', 'Blue ink']], '#14121c'); const clear = btn('btn ghost', 'Clear');
+  const panes = { draw: el('div'), type: el('div'), image: el('div') };
+  panes.draw.append(padC); panes.type.append(typed); panes.image.append(pick, el('div', 'hint', 'A photo of your signature on white paper works well.'));
+  let imgCanvas = null; let hasInk = false; let g = null;
+  const setMode = (m) => { mode = m; for (const b of tabs.children) b.classList.toggle('on', b.dataset.m === m); for (const k of Object.keys(panes)) panes[k].hidden = k !== m; if (m === 'draw') fit(); };
+  for (const [m, t] of modes) { const b = el('button', '', t); b.dataset.m = m; b.addEventListener('click', () => setMode(m)); tabs.append(b); }
+  function fit() { const r = padC.getBoundingClientRect(); if (!r.width) return; if (padC.width !== Math.round(r.width * 2)) { padC.width = Math.round(r.width * 2); padC.height = Math.round(r.height * 2); hasInk = false; } g = padC.getContext('2d'); g.lineCap = 'round'; g.lineJoin = 'round'; g.lineWidth = 4.2; g.strokeStyle = ink.value; }
+  let drawing = false; let last = null;
+  const pt = (e) => { const r = padC.getBoundingClientRect(); return { x: (e.clientX - r.left) * padC.width / r.width, y: (e.clientY - r.top) * padC.height / r.height }; };
+  padC.addEventListener('pointerdown', (e) => { fit(); drawing = true; last = pt(e); padC.setPointerCapture(e.pointerId); g.beginPath(); g.arc(last.x, last.y, 1.6, 0, 7); g.fillStyle = ink.value; g.fill(); hasInk = true; });
+  padC.addEventListener('pointermove', (e) => { if (!drawing) return; const p = pt(e); g.strokeStyle = ink.value; g.beginPath(); g.moveTo(last.x, last.y); g.lineTo(p.x, p.y); g.stroke(); last = p; });
+  const stop = () => { drawing = false; }; padC.addEventListener('pointerup', stop); padC.addEventListener('pointercancel', stop);
+  clear.addEventListener('click', () => { if (g) g.clearRect(0, 0, padC.width, padC.height); hasInk = false; typed.value = ''; imgCanvas = null; });
+  pick.addEventListener('click', async () => {
+    const p = await api.invoke('dlg:open', { kind: 'image', multi: false, title: 'Choose a picture of your signature' }); if (!p.length) return;
+    const im = await guard(() => readFile(p[0])); if (!im) return;
+    const bmp = await createImageBitmap(new Blob([im.bytes])); const k = Math.min(1, 900 / Math.max(bmp.width, bmp.height));
+    const c = document.createElement('canvas'); c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k); const x = c.getContext('2d'); x.drawImage(bmp, 0, 0, c.width, c.height);
+    const d = x.getImageData(0, 0, c.width, c.height); // paper turns transparent, ink stays
+    for (let i = 0; i < d.data.length; i += 4) { const lum = (d.data[i] * 3 + d.data[i + 1] * 6 + d.data[i + 2]) / 10; d.data[i + 3] = lum > 200 ? 0 : lum > 140 ? Math.round(255 * (200 - lum) / 60) : d.data[i + 3]; }
+    x.putImageData(d, 0, 0); imgCanvas = c; toast('Picture ready. Now add it to the page.');
+  });
+  function trimmed(src) {
+    const x = src.getContext('2d'); const d = x.getImageData(0, 0, src.width, src.height).data; let l = src.width; let t = src.height; let r = -1; let b = -1;
+    for (let yy = 0; yy < src.height; yy++) for (let xx = 0; xx < src.width; xx++) if (d[(yy * src.width + xx) * 4 + 3] > 8) { if (xx < l) l = xx; if (xx > r) r = xx; if (yy < t) t = yy; if (yy > b) b = yy; }
+    if (r < 0) return null;
+    const pd = 6; l = Math.max(0, l - pd); t = Math.max(0, t - pd); r = Math.min(src.width - 1, r + pd); b = Math.min(src.height - 1, b + pd);
+    const c = document.createElement('canvas'); c.width = r - l + 1; c.height = b - t + 1; c.getContext('2d').drawImage(src, l, t, c.width, c.height, 0, 0, c.width, c.height); return c;
+  }
+  async function makeSignature() {
+    let c = null;
+    if (mode === 'draw') c = hasInk ? trimmed(padC) : null;
+    else if (mode === 'type') { const v = typed.value.trim(); if (v) { await document.fonts.load('700 120px Caveat'); c = trimmed(textPng(v, { px: 120, color: ink.value, font: '700 120px Caveat, cursive' }).canvas); } }
+    else c = imgCanvas ? trimmed(imgCanvas) : null;
+    if (!c) throw new Error(mode === 'draw' ? 'Draw your signature in the box first.' : mode === 'type' ? 'Type your name first.' : 'Choose a picture first.');
+    return { png: await blobBytes(await canvasBlob(c, 'image/png')), url: c.toDataURL('image/png'), ratio: c.height / c.width };
+  }
+  return { tabs, panes, ink, clear, setMode, makeSignature };
 }
 
 function mountSign(tool) {
@@ -771,46 +838,7 @@ function mountSign(tool) {
     }
     prev.addEventListener('click', () => { pageNo--; show(); }); next.addEventListener('click', () => { pageNo++; show(); });
 
-    // signature maker
-    const tabs = el('div', 'seg sig-tabs'); const modes = [['draw', 'Draw'], ['type', 'Type'], ['image', 'Picture']]; let mode = 'draw';
-    const padC = el('canvas', 'sigpad'); padC.id = 'sigPad'; const typed = el('input', 'field'); typed.placeholder = 'Type your name'; typed.id = 'sigType'; typed.maxLength = 40;
-    const pick = btn('btn', 'Choose a picture'); const ink = select([['#14121c', 'Black ink'], ['#1b3a8c', 'Blue ink']], '#14121c'); const clear = btn('btn ghost', 'Clear');
-    const panes = { draw: el('div'), type: el('div'), image: el('div') };
-    panes.draw.append(padC); panes.type.append(typed); panes.image.append(pick, el('div', 'hint', 'A photo of your signature on white paper works well.'));
-    let imgCanvas = null; let hasInk = false; let g = null;
-    const setMode = (m) => { mode = m; for (const b of tabs.children) b.classList.toggle('on', b.dataset.m === m); for (const k of Object.keys(panes)) panes[k].hidden = k !== m; if (m === 'draw') fit(); };
-    for (const [m, t] of modes) { const b = el('button', '', t); b.dataset.m = m; b.addEventListener('click', () => setMode(m)); tabs.append(b); }
-    function fit() { const r = padC.getBoundingClientRect(); if (!r.width) return; if (padC.width !== Math.round(r.width * 2)) { padC.width = Math.round(r.width * 2); padC.height = Math.round(r.height * 2); hasInk = false; } g = padC.getContext('2d'); g.lineCap = 'round'; g.lineJoin = 'round'; g.lineWidth = 4.2; g.strokeStyle = ink.value; }
-    let drawing = false; let last = null;
-    const pt = (e) => { const r = padC.getBoundingClientRect(); return { x: (e.clientX - r.left) * padC.width / r.width, y: (e.clientY - r.top) * padC.height / r.height }; };
-    padC.addEventListener('pointerdown', (e) => { fit(); drawing = true; last = pt(e); padC.setPointerCapture(e.pointerId); g.beginPath(); g.arc(last.x, last.y, 1.6, 0, 7); g.fillStyle = ink.value; g.fill(); hasInk = true; });
-    padC.addEventListener('pointermove', (e) => { if (!drawing) return; const p = pt(e); g.strokeStyle = ink.value; g.beginPath(); g.moveTo(last.x, last.y); g.lineTo(p.x, p.y); g.stroke(); last = p; });
-    const stop = () => { drawing = false; }; padC.addEventListener('pointerup', stop); padC.addEventListener('pointercancel', stop);
-    clear.addEventListener('click', () => { if (g) g.clearRect(0, 0, padC.width, padC.height); hasInk = false; typed.value = ''; imgCanvas = null; });
-    pick.addEventListener('click', async () => {
-      const p = await api.invoke('dlg:open', { kind: 'image', multi: false, title: 'Choose a picture of your signature' }); if (!p.length) return;
-      const im = await guard(() => readFile(p[0])); if (!im) return;
-      const bmp = await createImageBitmap(new Blob([im.bytes])); const k = Math.min(1, 900 / Math.max(bmp.width, bmp.height));
-      const c = document.createElement('canvas'); c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k); const x = c.getContext('2d'); x.drawImage(bmp, 0, 0, c.width, c.height);
-      const d = x.getImageData(0, 0, c.width, c.height); // paper turns transparent, ink stays
-      for (let i = 0; i < d.data.length; i += 4) { const lum = (d.data[i] * 3 + d.data[i + 1] * 6 + d.data[i + 2]) / 10; d.data[i + 3] = lum > 200 ? 0 : lum > 140 ? Math.round(255 * (200 - lum) / 60) : d.data[i + 3]; }
-      x.putImageData(d, 0, 0); imgCanvas = c; toast('Picture ready. Now add it to the page.');
-    });
-    function trimmed(src) {
-      const x = src.getContext('2d'); const d = x.getImageData(0, 0, src.width, src.height).data; let l = src.width; let t = src.height; let r = -1; let b = -1;
-      for (let yy = 0; yy < src.height; yy++) for (let xx = 0; xx < src.width; xx++) if (d[(yy * src.width + xx) * 4 + 3] > 8) { if (xx < l) l = xx; if (xx > r) r = xx; if (yy < t) t = yy; if (yy > b) b = yy; }
-      if (r < 0) return null;
-      const pd = 6; l = Math.max(0, l - pd); t = Math.max(0, t - pd); r = Math.min(src.width - 1, r + pd); b = Math.min(src.height - 1, b + pd);
-      const c = document.createElement('canvas'); c.width = r - l + 1; c.height = b - t + 1; c.getContext('2d').drawImage(src, l, t, c.width, c.height, 0, 0, c.width, c.height); return c;
-    }
-    async function makeSignature() {
-      let c = null;
-      if (mode === 'draw') c = hasInk ? trimmed(padC) : null;
-      else if (mode === 'type') { const v = typed.value.trim(); if (v) { await document.fonts.load('700 120px Caveat'); c = trimmed(textPng(v, { px: 120, color: ink.value, font: '700 120px Caveat, cursive' }).canvas); } }
-      else c = imgCanvas ? trimmed(imgCanvas) : null;
-      if (!c) throw new Error(mode === 'draw' ? 'Draw your signature in the box first.' : mode === 'type' ? 'Type your name first.' : 'Choose a picture first.');
-      return { png: await blobBytes(await canvasBlob(c, 'image/png')), url: c.toDataURL('image/png'), ratio: c.height / c.width };
-    }
+    const { tabs, panes, ink, clear, setMode, makeSignature } = signaturePad({ pad: 'sigPad', type: 'sigType' });
     const placeBtn = btn('btn', 'Add to this page'); placeBtn.dataset.act = 'place';
     placeBtn.addEventListener('click', async () => {
       const s = await guard(makeSignature); if (!s) return; sig = s;
@@ -852,10 +880,20 @@ function renderTools() {
   }
 }
 renderTools();
+// pdfbench-extra.js adds its tools here: each one is placed after the tool named in `after`, or replaces a tool with the same id.
+function registerTools(list) {
+  for (const t of list) {
+    const at = TOOLS.findIndex((x) => x.id === t.id);
+    if (at >= 0) { TOOLS[at] = { ...TOOLS[at], ...t }; continue; }
+    const i = TOOLS.findIndex((x) => x.id === t.after); TOOLS.splice(i >= 0 ? i + 1 : TOOLS.length, 0, t);
+  }
+  renderTools();
+}
 function openTool(id, paths) {
   const t = TOOLS.find((x) => x.id === id); if (!t) return;
   Y.activateHome(); Y.showPage('pdf'); pendingPaths = paths && paths.length ? paths : null;
   try { t.mount(t); } finally { pendingPaths = null; }
 }
 // Used by the build script that makes template previews, and handy for support.
-window.YOSPDF = { openTool, ops: { opMerge, opPick, opCompress, opToImages, opFromImages, opWatermark, opPageNumbers, opSign }, loadView, renderPage, parseRanges };
+window.YOSPDF = { openTool, ops: { opMerge, opPick, opCompress, opToImages, opFromImages, opWatermark, opPageNumbers, opSign }, loadView, renderPage, parseRanges, toolCount: () => TOOLS.length, registerTools,
+  kit: { pdfjs, readFile, loadLib, loadView, saveOne, saveOut, replaceOption, renderPage, place, visualSize, textPng, canvasBlob, blobBytes, pad, btn, field, select, radios, dropZone, runner, workspace, showTools, guard, takeInitial, signaturePad, heicToJpeg, isHeic } };

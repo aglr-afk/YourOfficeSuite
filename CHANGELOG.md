@@ -1,5 +1,19 @@
 # Changelog
 
+## 2.4.0
+
+- PDF Bench grows from 15 to 22 tools, all working offline.
+- Redact PDF: draw boxes or search for words, email addresses and phone numbers; what is under a box is removed for good.
+- Compare PDF: every word added or removed between two versions, as a list, side by side, and as a marked-up PDF.
+- PDF to Text: all the text as a `.txt` file, or every image inside the PDF in a new folder.
+- Crop PDF: cut off margins with a live preview, let the app find the white margins, or change the page size to A4, Letter, A5 or Legal.
+- Flatten PDF: the whole PDF as images, or forms and comments only.
+- Black & white PDF: print quality or smaller file.
+- HEIC to PDF, and iPhone photos (HEIC / HEIF) in Images to PDF.
+- Edit and annotate is now built in: text (any script), highlights, ticks, crosses, signatures, a form field list, and "Lock the form after filling". The full editor is one click away.
+- File details shows and removes AI labels (Content Credentials) on JPG and PNG pictures.
+- The right-click menu sends a PDF straight to the new tools.
+
 ## 2.3.0
 
 - Online updates: the app checks this project's GitHub releases at start and shows what is new.

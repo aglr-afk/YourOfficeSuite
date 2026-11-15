@@ -13,6 +13,8 @@ It is built with these open-source projects, each under its own licence:
     pdf-lib                   MIT          github.com/cantoo-scribe/pdf-lib
     fflate                    MIT          github.com/101arrowz/fflate
     PDF.js                    Apache-2.0   github.com/mozilla/pdf.js
+    heic-to                   LGPL-3.0     github.com/hoppergee/heic-to
+    libheif (inside heic-to)  LGPL-3.0     github.com/strukturag/libheif
 
   App shell
     Electron                  MIT          github.com/electron/electron

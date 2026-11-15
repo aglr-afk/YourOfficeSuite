@@ -32,6 +32,10 @@ At run time the app also replaces the engine's caching service worker with a pas
 | pdf-lib (Cantoo fork) | MIT | https://github.com/cantoo-scribe/pdf-lib |
 | PDF.js | Apache-2.0 | https://github.com/mozilla/pdf.js |
 | fflate | MIT | https://github.com/101arrowz/fflate |
+| heic-to | LGPL-3.0 | https://github.com/hoppergee/heic-to |
+| libheif (inside heic-to) | LGPL-3.0 | https://github.com/strukturag/libheif |
+
+heic-to is shipped unchanged as its own file, `shell/vendor/heic-to/heic-to.js`, next to its licence text, so it can be swapped for another build of the same library.
 
 ## App shell
 

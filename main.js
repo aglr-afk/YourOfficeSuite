@@ -13,7 +13,7 @@ const ENGINE_DIR = app.isPackaged ? path.join(process.resourcesPath, 'engine') :
 const SHELL_DIR = path.join(__dirname, 'shell');
 const PREFERRED_PORT = 38917;
 const EDIT_EXT = ['docx', 'xlsx', 'pptx', 'csv', 'pdf'];
-const IMAGE_EXT = ['png', 'jpg', 'jpeg', 'webp', 'bmp', 'gif'];
+const IMAGE_EXT = ['png', 'jpg', 'jpeg', 'webp', 'bmp', 'gif', 'heic', 'heif'];
 const OPEN_EXT = [...EDIT_EXT, 'doc', 'xls', 'ppt', 'odt', 'ods', 'odp', 'rtf', 'txt'];
 
 let win = null;
@@ -476,6 +476,11 @@ function registerIpc() {
   handle('dlg:pickFolder', async (title) => {
     const r = await dialog.showOpenDialog(win, { title: title || 'Choose a folder', properties: ['openDirectory', 'createDirectory'] });
     return r.canceled || !r.filePaths[0] ? null : r.filePaths[0];
+  });
+  // PDF Bench saves the images it takes out of a PDF into a new folder next to that PDF.
+  handle('fs:makeFolder', async (dir) => {
+    if (!dir || !path.isAbsolute(dir)) throw new Error('That folder cannot be created');
+    await fsp.mkdir(dir, { recursive: true }); return dir;
   });
   handle('fs:uniquePath', async (dir, name) => {
     const ext = path.extname(name); const stem = path.basename(name, ext);

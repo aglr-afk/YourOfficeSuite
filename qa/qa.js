@@ -94,7 +94,7 @@ const out = (f) => path.join(OUT, f);
 // PDF Bench helpers
 async function tool(id, files) { await page('pdf'); if (await win.isVisible('#pdfBack')) await win.click('#pdfBack'); await stubOpen(files.map((f) => (path.isAbsolute(f) ? f : od(f)))); await win.click(`.tool-card[data-tool="${id}"]`); await win.click('#pdfTool [data-act="choose"]'); await win.waitForSelector('#pdfTool .tool-side:not([hidden])', { timeout: 30000 }); await sleep(700); }
 async function run(expect = /./, timeout = 120000) {
-  await win.click('#pdfTool [data-act="run"]');
+  await win.click('#pdfTool [data-act="run"]:visible');
   await win.waitForFunction(() => { const r = document.querySelector('#pdfTool .result'); return r && r.textContent.length > 0; }, null, { timeout });
   const text = await win.textContent('#pdfTool .result'); const err = await win.$('#pdfTool .result.err');
   assert(!err, 'tool reported: ' + text); assert(expect.test(text), 'unexpected result text: ' + text); return text;
@@ -110,7 +110,7 @@ async function run(expect = /./, timeout = 120000) {
   });
   await check('Brand: About reads as a free project, with no vendor names', async () => {
     await win.click('#btnAbout'); await sleep(300); const t = await win.textContent('#modal .sheet');
-    assert(/free office suite/i.test(t) && /YourOfficeSuite/.test(t), t.slice(0, 120)); assert(!/onlyoffice|ascensio|ranuts/i.test(t), 'vendor name in About: ' + t);
+    assert(/free office suite/i.test(t) && /YourOfficeSuite/.test(t), t.slice(0, 120)); assert(!/onlyoffice|ascensio|ranuts|agniva/i.test(t), 'vendor name in About: ' + t);
     await win.screenshot({ path: path.join(QA, 'v2-about.png') }); return t.slice(0, 90);
   });
   await check('Brand: licence credits are reachable on their own screen', async () => {
@@ -119,7 +119,7 @@ async function run(expect = /./, timeout = 120000) {
   });
   await check('Home: navigation rail switches between the four sections', async () => {
     for (const p of ['files', 'templates', 'pdf', 'start']) { await page(p); assert(await win.isVisible(`#page-${p}`), p + ' not visible'); }
-    assert((await win.$$('.tool-card')).length === 15, 'tool cards'); assert((await win.$$('.card-new')).length === 5, 'create cards');
+    assert((await win.$$('.tool-card')).length === 22, 'tool cards'); assert((await win.$$('.card-new')).length === 5, 'create cards');
   });
   await check('Files: OneDrive folder detected, lists documents and PDFs, hides others', async () => {
     await browse(); const n = await rowNames();
@@ -308,7 +308,7 @@ async function run(expect = /./, timeout = 120000) {
     });
   }
   await check('PDF Bench: sign with a typed name', async () => {
-    await tool('sign', ['Sample.pdf']); await win.click('#pdfTool .sig-tabs [data-m="type"]'); await win.fill('#sigType', 'Alex Morgan'); await win.click('#pdfTool [data-act="place"]'); await win.waitForSelector('#sigBox');
+    await tool('sign', ['Sample.pdf']); await win.click('#pdfTool .sig-tabs [data-m="type"]'); await win.fill('#sigType', 'Agniva Banik'); await win.click('#pdfTool [data-act="place"]'); await win.waitForSelector('#sigBox');
     await win.click('#pdfTool .pager .btn:last-child'); await sleep(900); await stubSave(out('signed-typed.pdf')); await run(/Saved signed/);
     assert(ink('out/signed-typed.pdf', 1, [0.5, 0.7, 0.95, 0.95]) > 0.004 && ink('out/signed-typed.pdf', 0, [0.5, 0.7, 0.95, 0.95]) < 0.001, 'signature not on page 2 only');
   });
@@ -338,10 +338,180 @@ async function run(expect = /./, timeout = 120000) {
   await check('PDF Bench: PDF to Word', async () => {
     await tool('pdf2word', ['Sample.pdf']); await run(/Converted 1 file/, 240000); const o = docText('od/Sample.docx'); assert(o.includes('PAGE1 line 0') && o.includes('PAGE5 line 11'), o.slice(0, 200)); return `${o.length} characters of text`;
   });
-  await check('PDF Bench: password-protected PDF is refused; Edit tool opens the editor', async () => {
+  await check('PDF Bench: password-protected PDF is refused', async () => {
     await page('pdf'); if (await win.isVisible('#pdfBack')) await win.click('#pdfBack'); await stubOpen([od('LockedPdf.pdf')]); await win.click('.tool-card[data-tool="split"]'); await win.click('#pdfTool [data-act="choose"]'); await sleep(2500);
     const m = await win.textContent('#toast'); assert(/password-protected/.test(m), m); await win.click('#pdfBack');
-    await stubOpen([od('Second.pdf')]); await win.click('.tool-card[data-tool="edit"]'); await waitOpened(); assert((await tabNames()).includes('Second.pdf'), 'no editor tab'); await closeActiveTab(); return m;
+    return m;
+  });
+  // ================= PDF Bench: tools added in 2.4.0 =================
+  const pyx = (code) => require('child_process').execFileSync('python3', ['-c', code], { cwd: QA }).toString().trim();
+  const layerBox = async () => { const h = await win.$('#pdfTool .player'); await h.scrollIntoViewIfNeeded(); return h.boundingBox(); };
+  const fitPage = async () => { await win.waitForSelector('#pdfTool .pstage canvas'); for (let i = 0; i < 2; i++) await win.click('#pdfTool .pager .zoomb >> nth=0'); await sleep(200); };
+  async function dragLayer(x0, y0, x1, y1) { const b = await layerBox(); const A = [b.x + b.width * x0, b.y + b.height * y0]; const B = [b.x + b.width * x1, b.y + b.height * y1]; await win.mouse.move(A[0], A[1]); await win.mouse.down(); await win.mouse.move((A[0] + B[0]) / 2, (A[1] + B[1]) / 2, { steps: 4 }); await win.mouse.move(B[0], B[1], { steps: 4 }); await win.mouse.up(); await sleep(250); }
+  async function clickLayer(fx, fy) { const b = await layerBox(); await win.mouse.click(b.x + b.width * fx, b.y + b.height * fy); await sleep(300); }
+  const toolErr = async (re) => { await win.click('#pdfTool [data-act="run"]:visible'); await win.waitForSelector('#pdfTool .result.err', { timeout: 60000 }); const t = await win.textContent('#pdfTool .result.err'); assert(re.test(t), 'unexpected message: ' + t); return t; };
+  const cropBoxes = (f) => JSON.parse(pyx(`import pikepdf,json\np=pikepdf.open('${f}')\nprint(json.dumps([[round(float(x)) for x in (pg.get('/CropBox') or pg.MediaBox)] for pg in p.pages]))`));
+
+  await check('PDF Bench: 22 tools, each new one opens from its card', async () => {
+    await page('pdf'); if (await win.isVisible('#pdfBack')) await win.click('#pdfBack');
+    const ids = await win.$$eval('.tool-card', (e) => e.map((x) => x.dataset.tool)); assert(ids.length === 22 && new Set(ids).size === 22, 'cards: ' + ids.join(','));
+    for (const id of ['redact', 'compare', 'pdf2text', 'crop', 'flatten', 'grayscale', 'heic2pdf']) { assert(ids.includes(id), 'missing ' + id); await win.click(`.tool-card[data-tool="${id}"]`); await win.waitForSelector(`#pdfTool[data-tool="${id}"] h1`); await win.click('#pdfBack'); }
+    await win.screenshot({ path: path.join(QA, 'v4-tools.png') }); return ids.join(', ');
+  });
+  await check('Redact: search finds names, numbers, emails and phones on every page, also on a rotated page', async () => {
+    await tool('redact', ['Private.pdf']); await fitPage();
+    await toolErr(/Draw a box/);
+    await win.fill('#redWords', 'Rahul Verma, 4455667788'); await win.check('#redEmails'); await win.check('#redPhones'); await win.click('#pdfTool [data-act="find"]');
+    await win.waitForFunction(() => /Found \d+ match/.test(document.getElementById('redFound').textContent), null, { timeout: 30000 });
+    const found = await win.textContent('#redFound'); const n = Number(await win.getAttribute('#redFound', 'data-n')); assert(n >= 9 && /on 3 pages/.test(found), found);
+    const before = Number(await win.getAttribute('#redCount', 'data-n')); await dragLayer(0.10, 0.072, 0.34, 0.105); const after = Number(await win.getAttribute('#redCount', 'data-n')); assert(after === before + 1, `hand-drawn box not added (${before} -> ${after})`);
+    await win.screenshot({ path: path.join(QA, 'v4-redact.png') }); return found;
+  });
+  await check('Redact: hidden words are gone from the saved file, other pages keep selectable text', async () => {
+    await stubSave(out('Private-redacted.pdf')); const t = await run(/Saved Private-redacted\.pdf/);
+    const r = JSON.parse(pyx(`import pypdf,pikepdf,json
+r=pypdf.PdfReader('out/Private-redacted.pdf'); t=[(p.extract_text() or '') for p in r.pages]; raw=b''
+for o in pikepdf.open('out/Private-redacted.pdf').objects:
+    if isinstance(o,pikepdf.Stream):
+        try: raw+=o.read_bytes()
+        except Exception: raw+=o.read_raw_bytes()
+print(json.dumps({'n':len(r.pages),'text':t,'leak':[w for w in ['Rahul','4455667788','example','98765','7946','Customer record'] if w.encode() in raw or any(w in x for x in t)],'meta':sorted((r.metadata or {}).keys()),'size':[[round(float(p.mediabox.width)),round(float(p.mediabox.height))] for p in r.pages]}))`));
+    assert(r.n === 4 && r.leak.length === 0, 'leaked: ' + JSON.stringify(r.leak)); assert(/PLAIN_PAGE_KEEP/.test(r.text[3]) && !r.text[0].trim() && !r.text[2].trim(), 'page text: ' + JSON.stringify(r.text));
+    assert(!r.meta.includes('/Author') && !r.meta.includes('/Title'), 'hidden details kept: ' + r.meta); assert(r.size[2][0] === 842 && r.size[2][1] === 595, 'rotated page size ' + r.size[2]);
+    const share = ink('out/Private-redacted.pdf', 0, [0, 0, 1, 1]); assert(share > 0.004 && share < 0.08, 'box area on page 1: ' + share);
+    const orig = JSON.parse(pyx(`import pypdf,json\nr=pypdf.PdfReader('od/Private.pdf')\nprint(json.dumps('Rahul Verma' in r.pages[0].extract_text()))`)); assert(orig === true, 'original was changed');
+    return `${t.slice(0, 40)} | page sizes ${JSON.stringify(r.size)}`;
+  });
+  await check('Redact: white boxes, Remove all, and a scan gets a clear message', async () => {
+    await tool('redact', ['Scan.pdf']); await fitPage(); await win.fill('#redWords', 'anything'); await win.click('#pdfTool [data-act="find"]');
+    await win.waitForFunction(() => /scan/.test(document.getElementById('redFound').textContent), null, { timeout: 30000 });
+    await win.selectOption('#redColor', 'white'); await dragLayer(0.2, 0.3, 0.6, 0.5); assert((await win.$$('#pdfTool .rbox.white')).length === 1, 'white box not shown');
+    await win.click('#pdfTool [data-act="clear"]'); assert(Number(await win.getAttribute('#redCount', 'data-n')) === 0, 'Remove all left boxes');
+    await dragLayer(0.2, 0.3, 0.6, 0.5); await stubSave(out('Scan-redacted.pdf')); await run(/Saved Scan-redacted/);
+    const v = Number(pyx(`import pypdfium2 as p\nim=p.PdfDocument('out/Scan-redacted.pdf')[0].render(scale=1).to_pil().convert('L'); w,h=im.size\nc=im.crop((int(.25*w),int(.34*h),int(.55*w),int(.46*h))); print(min(c.getdata()))`)); assert(v >= 250, 'white box not burned in: ' + v); return 'white box value ' + v;
+  });
+  const pickCompare = async (a, b) => { await page('pdf'); if (await win.isVisible('#pdfBack')) await win.click('#pdfBack'); await win.click('.tool-card[data-tool="compare"]'); await stubOpen([od(a)]); await win.click('#pdfTool [data-act="choose-a"]'); await sleep(400); await stubOpen([od(b)]); await win.click('#pdfTool [data-act="choose-b"]'); await sleep(400); };
+  await check('Compare: an offer letter with 5 known edits shows exactly those 5', async () => {
+    await pickCompare('OfferA.pdf', 'OfferB.pdf'); await run(/Found 5 changes/);
+    const d = await win.$eval('#cmpSum', (e) => ({ ...e.dataset, text: e.textContent })); assert(d.changes === '5', JSON.stringify(d));
+    const rows = await win.$$eval('#cmpList .chg', (e) => e.map((x) => ({ del: [...x.querySelectorAll('del')].map((q) => q.textContent).join('|'), ins: [...x.querySelectorAll('ins')].map((q) => q.textContent).join('|') })));
+    const flat = JSON.stringify(rows); assert(rows.length === 5 && /Welcome to the team\./.test(flat) && /"del":"Senior","ins":"Lead"/.test(flat) && /1200000/.test(flat) && /1350000/.test(flat) && /"del":"1","ins":"15"/.test(flat) && /The notice period is two months\./.test(flat), flat);
+    await win.click('#cmpList .chg >> nth=1'); await win.waitForSelector('#pdfTool .cmark.ins'); assert((await win.$$('#pdfTool .cmark.del')).length >= 1, 'no red marks'); await win.screenshot({ path: path.join(QA, 'v4-compare.png') });
+    await stubSave(out('Offer-compared.pdf')); await win.click('#pdfTool [data-act="markup"]'); await win.waitForFunction(() => document.querySelector('#pdfTool .result .acts'), null, { timeout: 30000 });
+    const o = pyx(`import pypdf\nr=pypdf.PdfReader('out/Offer-compared.pdf')\nprint(len(r.pages), 'Original, page 1' in r.pages[0].extract_text(), 'New, page 1' in r.pages[1].extract_text())`); assert(o === '2 True True', o);
+    await win.click('#pdfTool [data-act="swap"]'); await run(/Found 5 changes/); const s = await win.$eval('#cmpSum', (e) => e.dataset.added + '/' + e.dataset.removed); assert(s === `${d.removed}/${d.added}`, 'swap: ' + s);
+    return `${d.text} | marked-up PDF: ${o}`;
+  });
+  await check('Compare: a 55-page pair finishes in a few seconds; identical files and scans are handled', async () => {
+    await pickCompare('LongA.pdf', 'LongB.pdf'); const t0 = Date.now(); await run(/Found 3 changes/); const ms = Date.now() - t0; assert(ms < 15000, 'took ' + ms + ' ms');
+    const d = await win.$eval('#cmpSum', (e) => e.textContent); assert(/3 changes on 3 pages/.test(d), d);
+    await pickCompare('Sample.pdf', 'Sample.pdf'); await run(/No changes found/); assert(/the same/.test(await win.textContent('#cmpResult')), 'identical files');
+    await pickCompare('Scan.pdf', 'Scan.pdf'); await toolErr(/No text found/); return `${ms} ms for 55 pages | ${d}`;
+  });
+  await check('Images to PDF: HEIC photos mix with PNG, full size; a damaged photo is reported and left out', async () => {
+    await tool('heic2pdf', ['iphone1.heic', 'iphone2.HEIC', 'pic1.png', 'BadPhoto.heic']); await win.waitForFunction(() => document.querySelectorAll('#pdfTool .fitem').length === 3 && document.getElementById('heicNote').hidden, null, { timeout: 60000 });
+    const toastText = await win.textContent('#toast'); assert(/BadPhoto\.heic could not be opened/.test(toastText), 'toast: ' + toastText);
+    await win.selectOption('#pdfTool .tool-side select', 'fit'); await stubSave(out('heic.pdf')); await run(/Saved 3 pictures/);
+    const o = pyx(`import pikepdf\np=pikepdf.open('out/heic.pdf')\nprint(len(p.pages), [(int(i.Width),int(i.Height)) for pg in p.pages for i in pg.images.values()])`); assert(o === '3 [(1200, 900), (900, 1200), (800, 600)]', o);
+    await tool('img2pdf', ['iphone1.heic', 'pic2.jpg']); await win.waitForFunction(() => document.querySelectorAll('#pdfTool .fitem').length === 2, null, { timeout: 60000 }); await stubSave(out('heic-a4.pdf')); await run(/Saved 2 pictures/); return o;
+  });
+  await check('PDF to Text: text file with page marks; a scan gets a clear message', async () => {
+    await tool('pdf2text', ['Sample.pdf']); await stubSave(out('Sample.txt')); const t = await run(/Saved Sample\.txt/);
+    const o = pyx(`s=open('out/Sample.txt','rb').read()\nt=s.decode('utf-8-sig')\nprint(s[:3]==b'\\xef\\xbb\\xbf', t.count('--- Page '), 'PAGE2 line 3 lorem' in t, t.index('--- Page 1 ---')<t.index('PAGE1 line 0')<t.index('--- Page 2 ---'))`); assert(o === 'True 5 True True', o);
+    await tool('pdf2text', ['Scan.pdf']); await toolErr(/No text found/); return t.slice(0, 60);
+  });
+  await check('PDF to Text: images are saved at full size into a new folder next to the PDF, duplicates skipped', async () => {
+    await tool('pdf2text', ['Photo.pdf']); await win.check('#pdfTool input[name="totext"][value="images"]'); const t = await run(/Saved 2 images to the folder Photo-images/);
+    const o = pyx(`from PIL import Image;import glob\nfs=sorted(glob.glob('od/Photo-images/*'))\nprint(len(fs), sorted(Image.open(f).size for f in fs))`); assert(o === '2 [(1200, 900), (2400, 1800)]', o);
+    await tool('pdf2text', ['Sample.pdf']); await win.check('#pdfTool input[name="totext"][value="images"]'); await toolErr(/No images found/); return o;
+  });
+  await check('Crop: typed margins, one page only, and a rotated page', async () => {
+    const mm = async (v) => { for (const k of ['top', 'bottom', 'left', 'right']) await win.fill(`#crop-${k}`, String(v[k] || 0)); };
+    await tool('crop', ['Sample.pdf']); await fitPage(); await toolErr(/Type a margin/);
+    await mm({ top: 10, bottom: 10, left: 10, right: 10 }); assert((await win.$$('#pdfTool .cmask')).length === 4, 'no preview mask'); await stubSave(out('Sample-cropped.pdf')); await run(/Saved Sample-cropped/);
+    const a = cropBoxes('out/Sample-cropped.pdf'); assert(a.length === 5 && a.every((b) => JSON.stringify(b) === '[28,28,567,814]'), JSON.stringify(a));
+    await win.click('#pdfTool .pager [data-act="next"]'); await sleep(800); await win.check('#pdfTool input[name="cropscope"][value="one"]'); await stubSave(out('Sample-crop-one.pdf')); await run(/Saved/);
+    const b = cropBoxes('out/Sample-crop-one.pdf'); assert(JSON.stringify(b[1]) === '[28,28,567,814]' && JSON.stringify(b[0]) === '[0,0,595,842]' && JSON.stringify(b[2]) === '[0,0,595,842]', JSON.stringify(b));
+    await mm({ top: 400, bottom: 400 }); await win.check('#pdfTool input[name="cropscope"][value="all"]'); await toolErr(/margins are bigger/);
+    await tool('crop', ['Rot90.pdf']); await fitPage(); await mm({ top: 20 }); await win.check('#pdfTool input[name="cropscope"][value="one"]'); await stubSave(out('Rot90-cropped.pdf')); await run(/Saved/);
+    const c = cropBoxes('out/Rot90-cropped.pdf'); assert(JSON.stringify(c[0]) === '[57,0,595,842]', 'rotated: ' + JSON.stringify(c[0])); const tx = pdfInfo('out/Rot90-cropped.pdf'); assert(tx.n === 5 && /PAGE page 2/.test(tx.text[1]), 'text lost');
+    return `all pages ${JSON.stringify(a[0])}, rotated page ${JSON.stringify(c[0])}`;
+  });
+  await check('Crop: "Find the white margins" fits each page; change page size keeps text and wide pages', async () => {
+    await tool('crop', ['Margins.pdf']); await fitPage(); await win.click('#pdfTool [data-act="auto"]'); await win.waitForFunction(() => Number(document.getElementById('crop-left').value) > 0, null, { timeout: 20000 });
+    const shown = await win.$$eval('#pdfTool .mgrid input', (e) => e.map((x) => x.value).join(',')); await win.screenshot({ path: path.join(QA, 'v4-crop.png') }); await stubSave(out('Margins-cropped.pdf')); await run(/Saved Margins-cropped/);
+    const a = cropBoxes('out/Margins-cropped.pdf'); assert(a.length === 2 && a.every((b) => Math.abs(b[0] - 142) <= 3 && Math.abs(b[1] - 292) <= 3 && Math.abs(b[2] - 458) <= 3 && Math.abs(b[3] - 608) <= 3), JSON.stringify(a));
+    await tool('crop', ['Rot90.pdf']); await win.click('#cropTabs [data-m="size"]'); await win.selectOption('#cropSize', 'letter'); await stubSave(out('Rot90-letter.pdf')); await run(/Saved Rot90-letter/);
+    const o = pyx(`import pypdf\nr=pypdf.PdfReader('out/Rot90-letter.pdf')\nprint([(round(float(p.mediabox.width)),round(float(p.mediabox.height)),p.rotation) for p in r.pages[:2]], 'PAGE page 1' in r.pages[0].extract_text(), 'PAGE page 5' in r.pages[4].extract_text())`);
+    assert(o === '[(792, 612, 0), (612, 792, 0)] True True', o); return `auto margins (mm, top/bottom/left/right) ${shown} | ${o}`;
+  });
+  await check('Edit and annotate: fill a form, add text, Hindi text, highlight, tick, cross and a signature', async () => {
+    await tool('edit', ['Form.pdf']); await win.waitForSelector('#editTools'); await fitPage(); await win.waitForSelector('#pdfTool .fout');
+    assert((await win.$$('#editForm [data-key]')).length === 5 && (await win.$$('#pdfTool .fout')).length >= 5, 'form fields not listed');
+    await win.fill('#editForm [data-key="full_name"]', 'Asha Rao'); await win.fill('#editForm [data-key="notes"]', 'Line one\nLine two'); await win.check('#editForm [data-key="agree"]'); await win.selectOption('#editForm [data-key="country"]', 'Japan'); await win.selectOption('#editForm [data-key="plan"]', 'pro');
+    assert((await win.textContent('#pdfTool .fout[data-key="full_name"]')) === 'Asha Rao', 'value not shown on the page');
+    await win.click('#pdfTool .fout[data-key="agree"]'); await win.click('#pdfTool .fout[data-key="agree"]'); assert(await win.isChecked('#editForm [data-key="agree"]'), 'clicking the field on the page does not toggle it');
+    await win.click('#editTools [data-t="text"]'); await clickLayer(0.15, 0.9); await win.keyboard.type('EDIT_TEXT_OK'); await clickLayer(0.15, 0.82); await win.keyboard.insertText('नमस्ते दुनिया');
+    await win.click('#editTools [data-t="hl"]'); await dragLayer(0.11, 0.075, 0.5, 0.1);
+    await win.click('#editTools [data-t="tick"]'); await clickLayer(0.7, 0.3); await win.click('#editTools [data-t="cross"]'); await clickLayer(0.8, 0.3);
+    await win.click('#editTools [data-t="sig"]'); await win.click('#pdfTool .pane .sig-tabs [data-m="type"]'); await win.fill('#editSigType', 'Asha Rao'); await win.click('#pdfTool [data-act="sig-add"]'); await win.waitForSelector('#pdfTool .esig');
+    const kinds = await win.evaluate(() => ['etext', 'ehl', 'emark', 'esig'].map((c) => document.querySelectorAll('#pdfTool .' + c).length).join(',')); assert(kinds === '2,1,2,1', 'items on page: ' + kinds);
+    await win.screenshot({ path: path.join(QA, 'v4-edit.png') }); await stubSave(out('Form-edited.pdf')); await run(/Saved Form-edited/);
+    const o = JSON.parse(pyx(`import pypdf,json,pikepdf
+r=pypdf.PdfReader('out/Form-edited.pdf'); f=r.get_fields() or {}; pp=pikepdf.open('out/Form-edited.pdf')
+print(json.dumps({'v':{k:str(v.get('/V')) for k,v in f.items()},'text':'EDIT_TEXT_OK' in r.pages[0].extract_text(),'imgs':len(pp.pages[0].images),'pages':len(r.pages)}))`));
+    assert(o.v.full_name === 'Asha Rao' && /Line one/.test(o.v.notes) && o.v.agree === '/Yes' && o.v.country === 'Japan' && o.v.plan === '/pro', JSON.stringify(o.v)); assert(o.text && o.imgs >= 2 && o.pages === 2, JSON.stringify(o));
+    assert(ink('out/Form-edited.pdf', 0, [0.69, 0.29, 0.75, 0.34]) > 0.02 && ink('out/Form-edited.pdf', 0, [0.79, 0.29, 0.85, 0.34]) > 0.02, 'tick or cross missing'); assert(ink('out/Form-edited.pdf', 0, [0.55, 0.76, 0.95, 0.9]) > 0.003, 'signature missing');
+    assert(ink('out/Form-edited.pdf', 0, [0.14, 0.8, 0.5, 0.86]) > 0.004, 'Hindi line missing');
+    const y = pyx(`import pypdfium2 as p\nim=p.PdfDocument('out/Form-edited.pdf')[0].render(scale=1).to_pil().convert('RGB'); w,h=im.size\nprint(im.getpixel((int(.45*w),int(.088*h))))`); const m = /\((\d+), (\d+), (\d+)\)/.exec(y); assert(m && Number(m[1]) > 200 && Number(m[3]) < 170, 'highlight colour: ' + y);
+    return JSON.stringify(o.v);
+  });
+  await check('Edit and annotate: lock the form after filling; marks sit right on a rotated page; full editor opens', async () => {
+    await win.check('#editLock'); await stubSave(out('Form-locked.pdf')); await run(/Saved Form-locked/);
+    const o = pyx(`import pypdf\nr=pypdf.PdfReader('out/Form-locked.pdf')\nt=r.pages[0].extract_text()\nprint(len(r.get_fields() or {}), 'Asha Rao' in t, 'Japan' in t, 'FORM_TITLE_KEEP' in t)`); assert(o === '0 True True True', o);
+    await win.evaluate(async ([src, dst]) => { const r = await window.office.invoke('fs:read', src); const bytes = await window.YOSPDF.extra.opEdit(new Uint8Array(r.data), { items: [{ id: 'a', page: 0, kind: 'text', x: 0.6, y: 0.9, text: 'ROTATED_OK', size: 20, color: '#111111' }, { id: 'b', page: 0, kind: 'tick', x: 0.85, y: 0.6, size: 30, color: '#111111' }, { id: 'c', page: 0, kind: 'hl', x: 0.6, y: 0.7, w: 0.3, h: 0.05 }], fields: {}, lock: false }, 'Rot90.pdf'); await window.office.invoke('fs:write', { file: dst, data: bytes, force: true }); }, [od('Rot90.pdf'), out('Rot90-edited.pdf')]);
+    const d = (box) => ink('out/Rot90-edited.pdf', 0, box) - ink('od/Rot90.pdf', 0, box); const dt = d([0.59, 0.89, 0.9, 0.94]); const dk = d([0.85, 0.6, 0.9, 0.66]);
+    assert(dt > 0.02 && dk > 0.02, `rotated page: text ${dt}, tick ${dk}`); assert(d([0.05, 0.05, 0.4, 0.2]) < 0.002, 'marks landed in the wrong corner');
+    await win.click('#editFull'); await waitOpened(); assert((await tabNames()).includes('Form.pdf'), 'no editor tab'); await closeActiveTab(); return `${o} | rotated text +${dt.toFixed(3)}, tick +${dk.toFixed(3)}`;
+  });
+  await check('Flatten: whole PDF as images is the default, leaves no text or fonts, keeps form answers visible', async () => {
+    await tool('flatten', [out('Form-edited.pdf')]); assert(await win.isChecked('#pdfTool input[name="flatmode"][value="image"]'), 'image mode is not the default'); assert((await win.inputValue('#flatDpi')) === '150', 'default quality');
+    await stubSave(out('Form-flat.pdf')); await run(/Every page is now an image/);
+    const o = JSON.parse(pyx(`import pypdf,pikepdf,json
+r=pypdf.PdfReader('out/Form-flat.pdf'); p=pikepdf.open('out/Form-flat.pdf')
+print(json.dumps({'n':len(r.pages),'text':''.join((x.extract_text() or '') for x in r.pages).strip(),'fonts':sum(len(pg.get('/Resources',{}).get('/Font',{})) for pg in p.pages),'filters':sorted(set(str(i.get('/Filter')) for pg in p.pages for i in pg.images.values())),'fields':len(r.get_fields() or {}),'annots':sum(len(pg.get('/Annots',[])) for pg in p.pages),'w':[int(i.Width) for i in p.pages[0].images.values()]}))`));
+    assert(o.n === 2 && o.text === '' && o.fonts === 0 && o.fields === 0 && o.annots === 0 && JSON.stringify(o.filters) === '["/FlateDecode"]' && Math.abs(o.w[0] - 1240) <= 2, JSON.stringify(o));
+    const filled = ink('out/Form-flat.pdf', 0, [0.34, 0.118, 0.75, 0.146]); const empty = ink('od/Form.pdf', 0, [0.34, 0.118, 0.75, 0.146]); assert(filled > empty + 0.01, `form answer not visible (${filled} vs ${empty})`);
+    await win.selectOption('#flatDpi', '200'); await stubSave(out('Form-flat200.pdf')); await run(/Saved/); const w = pyx(`import pikepdf\npp=pikepdf.open('out/Form-flat200.pdf')\nprint([int(i.Width) for i in pp.pages[0].images.values()][0])`); assert(Math.abs(Number(w) - 1654) <= 2, 'print quality width ' + w);
+    return JSON.stringify(o);
+  });
+  await check('Flatten: forms and comments only keeps text selectable; nothing to flatten is reported', async () => {
+    await tool('flatten', ['Annot.pdf']); await win.check('#pdfTool input[name="flatmode"][value="forms"]'); await stubSave(out('Annot-flat.pdf')); const t = await run(/Flattened 0 form fields and 1 comment/);
+    const o = pyx(`import pypdf,pikepdf,pypdfium2 as p\nr=pypdf.PdfReader('out/Annot-flat.pdf')\nim=p.PdfDocument('out/Annot-flat.pdf')[0].render(scale=1,may_draw_forms=False,draw_annots=False).to_pil().convert('RGB'); w,h=im.size\npp=pikepdf.open('out/Annot-flat.pdf')\nprint(len(pp.pages[0].get('/Annots',[])), 'PAGE page 1' in r.pages[0].extract_text(), im.getpixel((int(w*320/595),int(h*(842-530)/842))))`);
+    assert(/^0 True \(2[0-9]{2}, [0-9]{1,2}, [0-9]{1,2}\)$/.test(o), o);
+    await tool('flatten', [out('Form-edited.pdf')]); await win.check('#pdfTool input[name="flatmode"][value="forms"]'); await stubSave(out('Form-flat-forms.pdf')); await run(/Flattened 5 form fields/);
+    const f = pyx(`import pypdf\nr=pypdf.PdfReader('out/Form-flat-forms.pdf')\nt=r.pages[0].extract_text()\nprint(len(r.get_fields() or {}), 'Asha Rao' in t, 'FORM_TITLE_KEEP' in t)`); assert(f === '0 True True', f);
+    await tool('flatten', ['Sample.pdf']); await win.check('#pdfTool input[name="flatmode"][value="forms"]'); await toolErr(/no form fields or comments to flatten/); return `${t.slice(0, 70)} | ${o}`;
+  });
+  await check('Black & white: every page turns grey at both quality levels', async () => {
+    const grey = (f) => pyx(`import pypdfium2 as p,pypdf,pikepdf\nfrom PIL import ImageChops\npp=pikepdf.open('${f}')\nd=p.PdfDocument('${f}'); im=d[0].render(scale=1).to_pil().convert('RGB'); r,g,b=im.split()\nprint(len(d), max(ImageChops.difference(r,g).getextrema()[1], ImageChops.difference(g,b).getextrema()[1]), min(im.convert('L').getdata())<120, repr((pypdf.PdfReader('${f}').pages[0].extract_text() or '').strip()), [int(i.Width) for i in pp.pages[0].images.values()][0])`);
+    await tool('grayscale', ['Color.pdf']); await stubSave(out('Color-gray.pdf')); await run(/Saved Color-gray/); const a = grey('out/Color-gray.pdf'); let m = /^2 (\d+) True '' (\d+)$/.exec(a); assert(m && Number(m[1]) <= 8 && Math.abs(Number(m[2]) - 1654) <= 2, a);
+    await win.check('#pdfTool input[name="graydpi"][value="120"]'); await stubSave(out('Color-gray120.pdf')); await run(/Saved/); const b = grey('out/Color-gray120.pdf'); m = /^2 (\d+) True '' (\d+)$/.exec(b); assert(m && Number(m[1]) <= 8 && Math.abs(Number(m[2]) - 992) <= 2, b);
+    const c = pyx(`import pypdfium2 as p\nfrom PIL import ImageChops\nim=p.PdfDocument('od/Color.pdf')[0].render(scale=1).to_pil().convert('RGB'); r,g,b=im.split()\nprint(ImageChops.difference(r,g).getextrema()[1])`); assert(Number(c) > 100, 'fixture is not colourful'); return `${a} | ${b}`;
+  });
+  await check('File details: AI labels are shown and removed from JPG and PNG, the picture itself is unchanged', async () => {
+    await tool('metadata', ['AiLabel.jpg', 'AiLabel.png']); await sleep(500); const t = await win.textContent('#pdfTool .tool-main');
+    assert((t.match(/Content Credentials \(AI label\)/g) || []).length === 2 && (t.match(/Marked as made with AI/g) || []).length === 2, 'labels not shown: ' + t.slice(0, 400));
+    await run(/Removed details from 2 files/);
+    const o = pyx(`from PIL import Image, ImageChops\nj=open('od/AiLabel-clean.jpg','rb').read(); p=open('od/AiLabel-clean.png','rb').read()\nsame=lambda a,b: ImageChops.difference(Image.open(a).convert('RGB'),Image.open(b).convert('RGB')).getbbox() is None\nprint(b'c2pa' in j, b'trainedAlgorithmicMedia' in j, b'caBX' in p, b'trainedAlgorithmicMedia' in p, same('od/AiLabel.jpg','od/AiLabel-clean.jpg'), same('od/AiLabel.png','od/AiLabel-clean.png'), b'c2pa' in open('od/AiLabel.jpg','rb').read())`);
+    assert(o === 'False False False False True True True', o); return o;
+  });
+  await check('Right-click menu sends a PDF to the new tools; licence list names the HEIC decoder', async () => {
+    await browse(); await rightClick('.row:has-text("Private.pdf")'); const items = await menuItems();
+    assert(['bench-edit', 'bench-redact', 'bench-compare', 'bench-crop', 'bench-flatten', 'bench-grayscale', 'bench-pdf2text'].every((i) => items.includes(i)), 'items: ' + items);
+    await win.click('#ctx [data-act="bench-redact"]'); await win.waitForSelector('#pdfTool[data-tool="redact"] .pstage canvas', { timeout: 20000 }); assert(/Private\.pdf/.test(await win.textContent('#pdfTool .bar2')), 'file not handed over');
+    await browse(); await rightClick('.row:has-text("OfferA.pdf")'); await win.click('#ctx [data-act="bench-compare"]'); await win.waitForSelector('#pdfTool .cmp-slot.has'); assert(/OfferA\.pdf/.test(await win.textContent('#pdfTool .cmp-slot[data-slot="a"]')), 'compare slot A not filled');
+    const lic = await win.evaluate(() => window.office.invoke('app:licenses')); assert(/heic-to/.test(lic.credits) && /libheif/.test(lic.credits) && /LGPL/.test(lic.credits), 'licences do not list the HEIC decoder'); return items.filter((i) => i.startsWith('bench-')).length + ' PDF Bench entries';
   });
 
   // ================= File details (metadata) =================
@@ -522,7 +692,7 @@ async function run(expect = /./, timeout = 120000) {
     const target = path.join(os.tmpdir(), manifest.file); if (fs.existsSync(target)) fs.unlinkSync(target);
     try {
       // an older or equal release is not offered
-      await setManifest({ ...manifest, version: '2.3.0', file: 'YourOfficeSuite-Setup-2.3.0.exe' }); let t = await checkNow(); assert(/You have the latest version/.test(t) && await win.isHidden('#updateBar'), 'same version offered: ' + t);
+      await setManifest({ ...manifest, version: '2.4.0', file: 'YourOfficeSuite-Setup-2.4.0.exe' }); let t = await checkNow(); assert(/You have the latest version/.test(t) && await win.isHidden('#updateBar'), 'same version offered: ' + t);
       // a tampered download is refused
       await setManifest({ ...manifest, sha256: '0'.repeat(64) }); t = await checkNow(); assert(/Version 9\.9\.10 is ready to install from GitHub/.test(t), t);
       await stubMsg(0); await win.click('#btnUpdate'); await win.waitForFunction(() => /safety check/.test(document.getElementById('toast').textContent), null, { timeout: 30000 });

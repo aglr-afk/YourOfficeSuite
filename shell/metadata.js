@@ -159,6 +159,7 @@
       if (s.m === 0xe1 && startsWith(b, d, 'Exif\0\0')) { exif = exifParse(b, d + 6, s.end); blocks.push('camera data (EXIF)'); }
       else if (s.m === 0xe1 && startsWith(b, d, 'http://ns.adobe.com/xap/')) blocks.push('XMP');
       else if (s.m === 0xed) blocks.push('IPTC'); else if (s.m === 0xfe) blocks.push('comment');
+      else if (s.m === 0xeb) blocks.push('Content Credentials (AI label)');
     }
     return { segs, exif: exif || {}, blocks };
   }
@@ -168,7 +169,7 @@
     add('Title', exif.desc); add('Author', exif.artist); add('Copyright', exif.copyright); add('Camera', [exif.make, exif.model].filter(Boolean).join(' ')); add('Date taken', exif.taken || exif.date); add('Software', exif.software);
     if (exif.gps) out.push(['Location (GPS)', 'Present']);
     const xmp = segs.find((s) => s.m === 0xe1 && startsWith(b, s.start + 4, 'http://ns.adobe.com/xap/'));
-    if (xmp) for (const [k, v] of xmpFields(dec.decode(b.subarray(xmp.start + 4, xmp.end)))) if (!out.some((r) => r[0] === k)) out.push([k, v]);
+    if (xmp) { const x = dec.decode(b.subarray(xmp.start + 4, xmp.end)); for (const [k, v] of xmpFields(x)) if (!out.some((r) => r[0] === k)) out.push([k, v]); if (/trainedAlgorithmicMedia/i.test(x)) out.push(['AI label', 'Marked as made with AI']); }
     if (blocks.length) out.push(['Hidden blocks', [...new Set(blocks)].join(', ')]);
     return out;
   }
@@ -221,7 +222,7 @@
   const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
   const crc32 = (u8) => { let c = 0xffffffff; for (let i = 0; i < u8.length; i++) c = CRC[(c ^ u8[i]) & 255] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; };
   const PNG_SIG = [137, 80, 78, 71, 13, 10, 26, 10];
-  const PNG_META = ['tEXt', 'zTXt', 'iTXt', 'eXIf', 'tIME'];
+  const PNG_META = ['tEXt', 'zTXt', 'iTXt', 'eXIf', 'tIME', 'caBX'];
   function pngChunks(b, name) {
     if (b.length < 20 || PNG_SIG.some((v, i) => b[i] !== v)) throw new Error(`${name} is not a valid PNG picture.`);
     const out = []; let p = 8; const v = new DataView(b.buffer, b.byteOffset, b.byteLength);
@@ -245,9 +246,10 @@
       if (c.type === 'tEXt') { const z = c.data.indexOf(0); if (z > 0) out.push([PNG_LABEL[latin1(c.data.subarray(0, z))] || latin1(c.data.subarray(0, z)), latin1(c.data.subarray(z + 1)).slice(0, 300)]); }
       else if (c.type === 'iTXt') {
         const z = c.data.indexOf(0); if (z <= 0) continue; const key = latin1(c.data.subarray(0, z)); const comp = c.data[z + 1]; const l = c.data.indexOf(0, z + 3); const t = l >= 0 ? c.data.indexOf(0, l + 1) : -1;
-        if (key === 'XML:com.adobe.xmp') { other.push('XMP'); if (!comp && t >= 0) for (const r of xmpFields(dec.decode(c.data.subarray(t + 1)))) out.push(r); }
+        if (key === 'XML:com.adobe.xmp') { other.push('XMP'); if (!comp && t >= 0) { const x = dec.decode(c.data.subarray(t + 1)); for (const r of xmpFields(x)) out.push(r); if (/trainedAlgorithmicMedia/i.test(x)) out.push(['AI label', 'Marked as made with AI']); } }
         else if (!comp && t >= 0) out.push([PNG_LABEL[key] || key, dec.decode(c.data.subarray(t + 1)).slice(0, 300)]); else other.push('compressed text');
-      } else if (c.type === 'zTXt') other.push('compressed text'); else if (c.type === 'eXIf') other.push('camera data (EXIF)'); else if (c.type === 'tIME') other.push('time stamp');
+      } else if (c.type === 'caBX') other.push('Content Credentials (AI label)');
+      else if (c.type === 'zTXt') other.push('compressed text'); else if (c.type === 'eXIf') other.push('camera data (EXIF)'); else if (c.type === 'tIME') other.push('time stamp');
     }
     if (other.length) out.push(['Hidden blocks', [...new Set(other)].join(', ')]);
     return out;

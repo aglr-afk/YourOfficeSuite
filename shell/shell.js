@@ -167,8 +167,9 @@
     items.push({ id: 'reveal', text: 'Show in folder', icon: 'i-folder', run: () => api.invoke('fs:reveal', e.path) });
     if (!e.isDir && state.recent.some((r) => r.path === e.path)) items.push({ id: 'forget', text: 'Remove from Recent', icon: 'i-x', run: async () => { state.recent = await api.invoke('recent:remove', e.path); refreshHome(); } });
     const ext = e.isDir ? '' : extOf(e.name);
-    if (ext === 'pdf') items.push({ label: 'PDF Bench' }, bench('compress', 'Compress', 'i-compress'), bench('sign', 'Sign', 'i-sign'), bench('organize', 'Organise pages', 'i-organize'), bench('split', 'Split or extract', 'i-split'),
-      bench('pdf2word', 'Convert to Word', 'i-doc'), bench('protect', 'Protect with a password', 'i-lock'), bench('metadata', 'File details', 'i-tag'));
+    if (ext === 'pdf') items.push({ label: 'PDF Bench' }, bench('compress', 'Compress', 'i-compress'), bench('sign', 'Sign', 'i-sign'), bench('edit', 'Edit and annotate', 'i-edit'), bench('redact', 'Redact', 'i-redact'), bench('compare', 'Compare with another PDF', 'i-compare'),
+      bench('organize', 'Organise pages', 'i-organize'), bench('split', 'Split or extract', 'i-split'), bench('crop', 'Crop or resize', 'i-crop'), bench('flatten', 'Flatten', 'i-layers'), bench('grayscale', 'Black & white', 'i-contrast'),
+      bench('pdf2word', 'Convert to Word', 'i-doc'), bench('pdf2text', 'Save the text or images', 'i-text'), bench('protect', 'Protect with a password', 'i-lock'), bench('metadata', 'File details', 'i-tag'));
     else if (['docx', 'xlsx', 'pptx'].includes(ext)) items.push({ label: 'PDF Bench' }, bench('office2pdf', 'Convert to PDF', 'i-convert'), bench('metadata', 'File details', 'i-tag'));
     return items;
   }
